@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  nip       String   @unique
+  username  String?  @unique
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userRoles       UserRole[]
+  ledTeams        Team[]       @relation("TeamLeader")
+  teamMembers     TeamMember[]
+  ratingsGiven    Rating[]     @relation("Evaluator")
+  ratingsReceived Rating[]     @relation("TargetUser")
+}
+
+model Role {
+  id        String   @id @default(uuid())
+  roleName  String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userRoles UserRole[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model Team {
+  id        String   @id @default(uuid())
+  teamName  String
+  leaderId  String?
+  leader    User?    @relation("TeamLeader", fields: [leaderId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members TeamMember[]
+  ratings Rating[]
+}
+
+model TeamMember {
+  teamId String
+  userId String
+  team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, userId])
+  @@index([userId])
+}
+
+model Rating {
+  id           String   @id @default(uuid())
+  evaluatorId  String
+  targetUserId String
+  teamId       String
+  score        Float
+  notes        String?
+  volumeWork   String?
+  qualityWork  String?
+  finalScore   Float?
+  periodMonth  Int
+  periodYear   Int
+  createdAt    DateTime @default(now())
+
+  evaluator  User @relation("Evaluator", fields: [evaluatorId], references: [id], onDelete: Cascade)
+  targetUser User @relation("TargetUser", fields: [targetUserId], references: [id], onDelete: Cascade)
+  team       Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([periodMonth, periodYear])
+  @@index([targetUserId])
+  @@index([evaluatorId])
+}
