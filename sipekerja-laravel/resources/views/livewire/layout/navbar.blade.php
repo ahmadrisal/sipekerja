@@ -1,8 +1,10 @@
 <nav class="sticky top-0 z-40 bg-minimal-indigo text-white shadow-lg border-b border-white/10 px-6 py-3 flex items-center justify-between">
     <div class="flex items-center gap-4">
+        @if(!in_array(session('active_role'), ['Ketua Tim', 'Pimpinan', 'Pegawai']))
         <button class="lg:hidden text-white/80 hover:text-white transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
         </button>
+        @endif
         <div class="hidden md:block">
             <h1 class="text-sm font-black uppercase tracking-[0.2em] text-white/90">{{ $title ?? 'Dashboard' }}</h1>
             <p class="text-[9px] font-medium text-white/50 uppercase tracking-widest">Sistem Penilaian Kinerja</p>
@@ -21,15 +23,9 @@
 
         <!-- Notification & Profile Cluster -->
         <div class="flex items-center gap-3 pl-6 border-l border-white/10">
-            <!-- Simple Notification Badge -->
-            <button class="relative w-8 h-8 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                <span class="absolute top-1 right-1 w-3 h-3 bg-red-500 border-2 border-minimal-indigo rounded-full text-[7px] font-black flex items-center justify-center">1</span>
-            </button>
-
             <!-- User Info -->
             <div class="flex items-center gap-3 group cursor-default">
-                <div class="hidden sm:block text-right">
+                <div class="text-right">
                     <p class="text-[10px] font-black uppercase tracking-tight text-white">{{ Auth::user()->name }}</p>
                     <p class="text-[8px] font-black uppercase tracking-widest text-white/50">{{ session('active_role') }}</p>
                 </div>
@@ -42,18 +38,71 @@
                 </div>
             </div>
 
-            <!-- Logout Button (Icon Only for Minimalist) -->
-            <button 
-                wire:confirm="Yakin ingin keluar?"
-                onclick="event.preventDefault(); document.getElementById('navbar-logout-form').submit();"
-                class="w-9 h-9 flex items-center justify-center rounded-xl bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white transition-all shadow-lg active:scale-95 border border-red-500/20"
-                title="Keluar Sistem"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-            </button>
-            <form id="navbar-logout-form" action="{{ route('logout') }}" method="POST" class="hidden">
-                @csrf
-            </form>
+            <!-- Logout Button + Dialog -->
+            <div x-data="{ open: false, loading: false }">
+                <button
+                    @click="open = true"
+                    class="w-9 h-9 flex items-center justify-center rounded-xl bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white transition-all shadow-lg active:scale-95 border border-red-500/20"
+                    title="Keluar Sistem"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                </button>
+
+                <!-- Logout Confirmation Dialog -->
+                <div
+                    x-show="open"
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    class="fixed inset-0 z-[200] flex items-center justify-center p-4"
+                    style="display: none;"
+                >
+                    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="if(!loading) open = false"></div>
+                    <div
+                        x-show="open"
+                        x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 scale-95"
+                        x-transition:enter-end="opacity-100 scale-100"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 scale-100"
+                        x-transition:leave-end="opacity-0 scale-95"
+                        class="relative bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8 border-t-4 border-red-500"
+                    >
+                        <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mb-5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                        </div>
+                        <h4 class="text-lg font-black text-slate-800 uppercase italic leading-none mb-2">Keluar Sistem?</h4>
+                        <p class="text-sm text-slate-500 font-medium mb-8">Sesi Anda akan diakhiri dan Anda perlu login kembali untuk mengakses sistem.</p>
+                        <div class="flex gap-3">
+                            <button
+                                type="button"
+                                @click="open = false"
+                                :disabled="loading"
+                                class="flex-1 py-3.5 bg-slate-100 text-slate-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95 disabled:opacity-50"
+                            >Batal</button>
+                            <button
+                                type="button"
+                                @click="loading = true; document.getElementById('navbar-logout-form').submit();"
+                                :disabled="loading"
+                                class="flex-1 py-3.5 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all active:scale-95 shadow-lg shadow-red-500/20 disabled:opacity-75 disabled:cursor-wait flex items-center justify-center gap-2"
+                            >
+                                <svg x-show="loading" class="animate-spin w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                                <span x-text="loading ? 'Keluar...' : 'Ya, Keluar'"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="navbar-logout-form" action="{{ route('logout') }}" method="POST" class="hidden">
+                    @csrf
+                </form>
+            </div>
         </div>
     </div>
 </nav>

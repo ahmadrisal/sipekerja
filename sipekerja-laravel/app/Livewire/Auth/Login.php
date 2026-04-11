@@ -28,11 +28,11 @@ class Login extends Component
 
         if (Auth::attempt($credentials)) {
             session()->regenerate();
-            
-            // Set initial active role
+
+            // Set initial active role — load roles eager to avoid extra query
             $user = Auth::user();
-            $roles = $user->getRoleNames();
-            session(['active_role' => $roles->first()]);
+            $user->load('roles');
+            session(['active_role' => $user->roles->first()?->name]);
 
             return redirect()->intended('/dashboard');
         }

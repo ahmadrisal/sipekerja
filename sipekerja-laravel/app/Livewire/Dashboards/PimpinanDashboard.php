@@ -24,6 +24,8 @@ class PimpinanDashboard extends Component
     public $reportSearch = '';
     public $reportData = null;
 
+    private $shouldRefreshCharts = false;
+
     public function mount()
     {
         $this->month = date('n');
@@ -47,41 +49,33 @@ class PimpinanDashboard extends Component
 
     public function updatedMonth()
     {
-        $this->dispatchChartsRefresh();
+        $this->shouldRefreshCharts = true;
     }
 
     public function updatedYear()
     {
-        $this->dispatchChartsRefresh();
+        $this->shouldRefreshCharts = true;
     }
 
     public function updatedTeamFilter()
     {
-        $this->dispatchChartsRefresh();
+        $this->shouldRefreshCharts = true;
     }
 
     public function setActiveTab($tab)
     {
         $this->activeTab = $tab;
         if ($tab === 'overview') {
-            $this->dispatchChartsRefresh();
+            $this->shouldRefreshCharts = true;
         }
     }
 
     public function setReportUserId($id)
     {
         $this->reportUserId = $id;
-        $this->detailUserId = null; // Close detail dialog if open
+        $this->detailUserId = null;
         $this->setActiveTab('report');
-        $this->reportSearch = ''; // Clear search to hide suggestions
-    }
-
-    private function dispatchChartsRefresh()
-    {
-        $service = app(DashboardService::class);
-        $rekap = $service->getPimpinanRekap($this->month, $this->year);
-        $charts = $this->prepareChartsData($rekap['data']);
-        $this->dispatch('refreshCharts', charts: $charts);
+        $this->reportSearch = '';
     }
 
     public function render(DashboardService $service)
@@ -116,11 +110,16 @@ class PimpinanDashboard extends Component
         // Extract unique teams for filter
         $allTeams = collect($rekap['data'])->flatMap(fn($u) => collect($u->details)->pluck('teamName'))->unique()->sort();
 
-        // Prepare charts data
+        // Prepare charts data (single computation per render)
         $charts = $this->prepareChartsData($rekap['data']);
+
+        if ($this->shouldRefreshCharts && $this->activeTab === 'overview') {
+            $this->dispatch('refreshCharts', charts: $charts);
+        }
 
         return view('livewire.dashboards.pimpinan-dashboard', [
             'rekap' => $data,
+            'allUsers' => collect($rekap['data']), // unfiltered, for report search suggestions
             'stats' => $rekap['stats'],
             'allTeams' => $allTeams,
             'charts' => $charts,
@@ -139,23 +138,29 @@ class PimpinanDashboard extends Component
         // 1. Team Performance Distribution (Average Score)
         $teamSumMap = [];
         $teamCountMap = [];
+        $teamLeaderMap = [];
         foreach ($data as $u) {
             foreach ($u->details as $d) {
                 if ($d['score'] !== null && $d['score'] > 0) {
                     $t = $d['teamName'];
                     $teamSumMap[$t] = ($teamSumMap[$t] ?? 0) + $d['score'];
                     $teamCountMap[$t] = ($teamCountMap[$t] ?? 0) + 1;
+                    if (!isset($teamLeaderMap[$t])) {
+                        $teamLeaderMap[$t] = $d['leaderName'];
+                    }
                 }
             }
         }
-        
+
         $teamPerfMap = [];
         foreach ($teamSumMap as $t => $sum) {
             $teamPerfMap[$t] = round($sum / $teamCountMap[$t], 2);
         }
-        
+
         arsort($teamPerfMap);
         $topTeams = array_slice($teamPerfMap, 0, 15);
+        $topTeamLabels = array_keys($topTeams);
+        $topTeamLeaders = array_map(fn($t) => $teamLeaderMap[$t] ?? '-', $topTeamLabels);
 
         // 2. Perf Distribution
         $dist = ['Sangat Baik' => 0, 'Baik' => 0, 'Cukup' => 0, 'Kurang' => 0, 'Belum Dinilai' => 0];
@@ -182,7 +187,7 @@ class PimpinanDashboard extends Component
         $avgY = $countValid > 0 ? $totalY / $countValid : 0;
 
         return [
-            'teamSize' => ['labels' => array_keys($topTeams), 'series' => array_values($topTeams)],
+            'teamSize' => ['labels' => $topTeamLabels, 'series' => array_values($topTeams), 'leaders' => array_values($topTeamLeaders)],
             'perfDist' => ['labels' => array_keys($dist), 'series' => array_values($dist)],
             'scatter' => $scatter,
             'avgX' => round($avgX, 2),

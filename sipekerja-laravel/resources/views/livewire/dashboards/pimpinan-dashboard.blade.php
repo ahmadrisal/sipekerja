@@ -1,11 +1,11 @@
-<div class="font-outfit space-y-6 pb-12">
+<div class="font-outfit space-y-6 pb-24 md:pb-12">
     <!-- Header Area -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
             <h2 class="text-2xl font-black text-slate-800 tracking-tight italic">Dashboard Overview</h2>
             <p class="text-slate-400 text-[11px] font-medium">Monitoring performa dan beban kerja pegawai secara real-time.</p>
         </div>
-        <div class="flex gap-1.5 p-1 bg-white rounded-xl shadow-sm border border-slate-100">
+        <div class="hidden md:flex flex-wrap gap-1.5 p-1 bg-white rounded-xl shadow-sm border border-slate-100">
             <button wire:click="setActiveTab('overview')" class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all {{ $activeTab === 'overview' ? 'bg-minimal-indigo text-white shadow-md' : 'text-slate-400 hover:bg-slate-50' }}">
                 Ringkasan Tabular
             </button>
@@ -52,6 +52,7 @@
         </div>
     </div>
 
+    <div wire:loading.class="opacity-50 pointer-events-none" wire:loading.class.remove="transition-opacity" wire:target="setActiveTab" class="transition-opacity duration-150">
     @if($activeTab === 'overview')
     <!-- Compliance Action Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -90,7 +91,7 @@
 
         <!-- Charts Board -->
         <div class="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100">
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-10">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
                 <!-- Scatter Chart -->
                 <div>
                     <div class="flex items-center justify-between mb-6 px-1">
@@ -103,23 +104,23 @@
                             <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-slate-200"></span> Average</div>
                         </div>
                     </div>
-                    <div id="scatterChart" class="h-80 w-full" wire:ignore></div>
+                    <div id="scatterChart" class="h-56 sm:h-80 w-full" wire:ignore></div>
                 </div>
 
                 <!-- Team Performance Bar Chart -->
-                <div class="border-t xl:border-t-0 xl:border-l border-slate-50 pt-8 xl:pt-0 xl:pl-10">
+                <div class="border-t lg:border-t-0 lg:border-l border-slate-50 pt-8 lg:pt-0 lg:pl-10">
                     <div class="px-1 mb-6">
                         <h3 class="text-lg font-black text-slate-800 tracking-tight">Rata-rata Capaian Per Tim</h3>
                         <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Nilai Rata-rata Anggota Tim (0-100)</p>
                     </div>
-                    <div id="teamBarChart" class="h-80 w-full" wire:ignore></div>
+                    <div id="teamBarChart" class="h-56 sm:h-80 w-full" wire:ignore></div>
                 </div>
             </div>
         </div>
 
         <!-- Table Card -->
         <div class="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
-            <div class="p-8 border-b border-slate-50 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+            <div class="p-4 sm:p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h3 class="text-xl font-black text-slate-800 tracking-tight italic">Rekapitulasi Penilaian</h3>
                     <p class="text-xs text-slate-400 font-medium font-mono uppercase tracking-tighter">{{ $monthNames[$month] ?? '...' }} {{ $year }}</p>
@@ -136,7 +137,8 @@
                     </select>
                 </div>
             </div>
-            <div class="overflow-x-auto px-4">
+            {{-- ===== TAMPILAN DESKTOP (tabel, md+) ===== --}}
+            <div class="hidden md:block overflow-x-auto px-4">
                 <table class="w-full text-left">
                     <thead>
                         <tr class="bg-slate-50/30">
@@ -165,7 +167,7 @@
                                 </div>
                             </td>
                             <td class="px-4 py-4 text-center">
-                                <span class="inline-flex px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest {{ $u->ratedTeams === $u->totalTeams ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600' }}">
+                                <span class="inline-flex px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest {{ $u->totalTeams > 0 && $u->ratedTeams === $u->totalTeams ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600' }}">
                                     {{ $u->ratedTeams }}/{{ $u->totalTeams }} DONE
                                 </span>
                             </td>
@@ -184,12 +186,51 @@
                     </tbody>
                 </table>
             </div>
+
+            {{-- ===== TAMPILAN MOBILE (kartu, < md) ===== --}}
+            <div class="block md:hidden divide-y divide-slate-50">
+                @forelse($rekap as $u)
+                @php $allDone = $u->totalTeams > 0 && $u->ratedTeams === $u->totalTeams; @endphp
+                <div class="px-4 py-3 flex flex-col gap-3">
+                    {{-- Baris atas: avatar + nama + badge --}}
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-white flex items-center justify-center text-slate-400 font-black italic shadow-inner text-[11px]">
+                                {{ substr($u->name, 0, 1) }}
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-[12px] font-black text-slate-800 uppercase tracking-tight leading-none truncate">{{ $u->name }}</p>
+                                <p class="text-[9px] font-mono font-bold text-slate-400 uppercase mt-0.5">{{ $u->nip }}</p>
+                            </div>
+                        </div>
+                        <span class="shrink-0 inline-flex px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest {{ $allDone ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600' }}">
+                            {{ $u->ratedTeams }}/{{ $u->totalTeams }} Done
+                        </span>
+                    </div>
+                    {{-- Baris bawah: score + tombol detail --}}
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1 flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Avg Score</span>
+                            <span class="text-base font-black italic {{ $u->averageScore >= 80 ? 'text-emerald-600' : ($u->averageScore >= 60 ? 'text-amber-500' : ($u->averageScore > 0 ? 'text-red-500' : 'text-slate-300')) }}">
+                                {{ $u->averageScore > 0 ? number_format($u->averageScore, 2) : '—' }}
+                            </span>
+                        </div>
+                        <button
+                            wire:click="setDetailUser('{{ $u->id }}')"
+                            class="shrink-0 px-4 py-2 rounded-xl border border-minimal-indigo/20 text-minimal-indigo text-[9px] font-black uppercase tracking-widest hover:bg-minimal-indigo hover:text-white transition-all active:scale-95"
+                        >Detail</button>
+                    </div>
+                </div>
+                @empty
+                <div class="px-4 py-10 text-center text-slate-300 font-bold italic text-xs">Tidak ada data.</div>
+                @endforelse
+            </div>
         </div>
     </div>
     @else
         <!-- Report Individu Tab -->
         <div class="w-full space-y-6 animate-in fade-in duration-500">
-            <div class="bg-white rounded-[2rem] p-10 shadow-sm border border-slate-100 text-center space-y-4">
+            <div class="bg-white rounded-[2rem] p-6 sm:p-10 shadow-sm border border-slate-100 text-center space-y-4">
                 <div class="w-16 h-16 bg-minimal-indigo/5 text-minimal-indigo rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                 </div>
@@ -205,7 +246,7 @@
 
                     @if($reportSearch)
                         <div class="absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-50 overflow-hidden max-h-64 overflow-y-auto">
-                            @php $suggestions = collect($rekap)->filter(fn($u) => str_contains(strtolower($u->name), strtolower($reportSearch)) || str_contains($u->nip, $reportSearch))->take(5); @endphp
+                            @php $suggestions = $allUsers->filter(fn($u) => str_contains(strtolower($u->name), strtolower($reportSearch)) || str_contains($u->nip, $reportSearch))->take(5); @endphp
                             @forelse($suggestions as $u)
                                 <button wire:click="setReportUserId('{{ $u->id }}')" class="w-full p-4 text-left hover:bg-slate-50 transition-all flex items-center justify-between group border-b border-slate-50 last:border-none">
                                     <div class="flex items-center gap-3">
@@ -234,18 +275,19 @@
             </div>
 
             @if($reportUserId)
-                <div class="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100">
+                <div class="bg-white rounded-[2rem] p-4 sm:p-8 shadow-sm border border-slate-100">
                     <livewire:dashboards.pegawai-dashboard :userId="$reportUserId" :month="$month" :year="$year" :isFromPimpinan="true" :key="'report-'.$reportUserId.'-'.$month.'-'.$year" />
                 </div>
             @endif
         </div>
     @endif
+    </div>{{-- end wire:loading wrapper --}}
 
     <!-- Detail Dialog -->
     @if($detailUser)
     <div class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300 pointer-events-auto">
-        <div class="bg-white w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 relative">
-            <div class="p-10 relative z-10">
+        <div class="bg-white w-full max-w-xl rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 relative max-h-[90vh] overflow-y-auto">
+            <div class="p-6 sm:p-10 relative z-10">
                 <div class="flex items-center justify-between mb-8">
                     <div class="flex items-center gap-5">
                         <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-minimal-indigo to-minimal-violet text-white flex items-center justify-center text-3xl font-black italic shadow-xl">
@@ -305,7 +347,7 @@
     @if($showIncompleteTeamsDialog)
     <div class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300 pointer-events-auto">
         <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div class="p-10">
+            <div class="p-6 sm:p-10">
                 <div class="flex items-center justify-between mb-8">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-inner">
@@ -350,7 +392,7 @@
     @if($showIncompleteEmployeesDialog)
     <div class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300 pointer-events-auto">
         <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div class="p-10">
+            <div class="p-6 sm:p-10">
                 <div class="flex items-center justify-between mb-8">
                     <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center shadow-inner">
@@ -394,6 +436,33 @@
         </div>
     </div>
     @endif
+
+    {{-- ===== BOTTOM NAV BAR (mobile only, < md) ===== --}}
+    <div class="fixed bottom-0 left-0 right-0 z-50 md:hidden">
+        <div class="bg-white border-t border-slate-100 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+            <div class="flex">
+                <button
+                    wire:click="setActiveTab('overview')"
+                    class="flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-all active:scale-95 {{ $activeTab === 'overview' ? 'text-minimal-indigo' : 'text-slate-400' }}"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transition-transform {{ $activeTab === 'overview' ? 'scale-110' : '' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" rx="2" x="3" y="3"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                    <span class="text-[9px] font-black uppercase tracking-widest">Ringkasan</span>
+                    <span class="h-0.5 w-5 rounded-full transition-all {{ $activeTab === 'overview' ? 'bg-minimal-indigo' : 'bg-transparent' }}"></span>
+                </button>
+
+                <div class="w-px bg-slate-100 my-2"></div>
+
+                <button
+                    wire:click="setActiveTab('report')"
+                    class="flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-all active:scale-95 {{ $activeTab === 'report' ? 'text-minimal-indigo' : 'text-slate-400' }}"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transition-transform {{ $activeTab === 'report' ? 'scale-110' : '' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span class="text-[9px] font-black uppercase tracking-widest">Report</span>
+                    <span class="h-0.5 w-5 rounded-full transition-all {{ $activeTab === 'report' ? 'bg-minimal-indigo' : 'bg-transparent' }}"></span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     @script
     <script>
@@ -491,9 +560,17 @@
                     labels: { style: { fontSize: '9px', fontWeight: 800, colors: '#64748b' } }
                 },
                 grid: { borderColor: '#f8fafc' },
-                tooltip: { 
-                    theme: 'dark',
-                    y: { formatter: function(val) { return val + " pts" } }
+                tooltip: {
+                    custom: function({ series, seriesIndex, dataPointIndex }) {
+                        const teamName = chartsData.teamSize.labels[dataPointIndex] || '-';
+                        const leader  = chartsData.teamSize.leaders[dataPointIndex] || '-';
+                        const score   = (series[seriesIndex][dataPointIndex] || 0).toFixed(1);
+                        return `<div style="padding:12px 16px;background:#0f172a;color:#fff;border-radius:12px;border:1px solid rgba(255,255,255,0.08);font-family:Outfit,sans-serif;min-width:160px">
+                                    <p style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#818cf8;margin-bottom:6px">${teamName}</p>
+                                    <p style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.45);margin-bottom:8px">Ketua: ${leader}</p>
+                                    <p style="font-size:16px;font-weight:900;font-style:italic;color:#fff">${score} <span style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.4)">pts</span></p>
+                                </div>`;
+                    }
                 }
             };
 

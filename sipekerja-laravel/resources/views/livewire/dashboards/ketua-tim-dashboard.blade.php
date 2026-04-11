@@ -1,14 +1,14 @@
-<div class="font-outfit space-y-6 pb-12" 
-    x-data="{ 
-        activeTab: @entangle('activeTab'),
+<div class="font-outfit space-y-6 pb-24 md:pb-12"
+    x-data="{
+        activeTab: '{{ $activeTab }}',
         init() {
             this.$watch('activeTab', value => {
                 if (value === 'dashboard') {
-                    setTimeout(() => initChart(), 50);
+                    setTimeout(() => { if (typeof window.initChart === 'function') window.initChart(); }, 50);
                 }
             });
         }
-    }" 
+    }"
     x-cloak>
     <!-- Header Area & Tab Navigation -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -16,18 +16,19 @@
             <h2 class="text-2xl font-black text-slate-800 tracking-tight italic">Ketua Tim Dashboard</h2>
             <p class="text-slate-400 text-[11px] font-medium">Monitoring progres penilaian dan capaian performa anggota tim.</p>
         </div>
-        <div class="flex gap-1.5 p-1 bg-white rounded-xl shadow-sm border border-slate-100">
-            <button @click="activeTab = 'dashboard'" class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all" :class="activeTab === 'dashboard' ? 'bg-minimal-indigo text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'">
+        {{-- Tab di header: hanya tampil di desktop (md+) --}}
+        <div class="hidden md:flex gap-1.5 p-1 bg-white rounded-xl shadow-sm border border-slate-100">
+            <button @click="activeTab = 'dashboard'" class="px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all" :class="activeTab === 'dashboard' ? 'bg-minimal-indigo text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'">
                 Dashboard
             </button>
-            <button @click="activeTab = 'input'" class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all" :class="activeTab === 'input' ? 'bg-minimal-indigo text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'">
+            <button @click="activeTab = 'input'" class="px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all" :class="activeTab === 'input' ? 'bg-minimal-indigo text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'">
                 Input Nilai
             </button>
         </div>
     </div>
 
     <!-- Global Period Filter -->
-    <div class="bg-white p-4 rounded-[1.5rem] shadow-sm border border-slate-100 flex items-center justify-between gap-4">
+    <div class="bg-white p-4 rounded-[1.5rem] shadow-sm border border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-minimal-indigo/5 text-minimal-indigo flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
@@ -79,8 +80,12 @@
                 @endforeach
 
                 <!-- Assessment Progress Card -->
-                <div 
-                    wire:click="{{ $stats['unratedCount'] > 0 ? '$set(\'showUnratedDialog\', true)' : 'setActiveTab(\'input\')' }}"
+                <div
+                    @if($stats['unratedCount'] > 0)
+                        wire:click="$set('showUnratedDialog', true)"
+                    @else
+                        @click="activeTab = 'input'"
+                    @endif
                     class="bg-white p-5 rounded-[1.5rem] shadow-sm border border-slate-100 flex items-center justify-between group hover:border-minimal-indigo/30 hover:shadow-md transition-all cursor-pointer relative overflow-hidden h-full"
                 >
                     <div class="absolute top-0 right-0 w-12 h-12 bg-amber-500/5 rounded-bl-[1.5rem]"></div>
@@ -153,7 +158,7 @@
                         @endforelse
                     </div>
 
-                    <button wire:click="setActiveTab('input')" class="mt-6 w-full py-4 rounded-2xl bg-slate-900 shadow-xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-minimal-indigo transition-all active:scale-95 flex items-center justify-center gap-3 relative z-10">
+                    <button @click="activeTab = 'input'" class="mt-6 w-full py-4 rounded-2xl bg-slate-900 shadow-xl text-white text-[10px] font-black uppercase tracking-widest hover:bg-minimal-indigo transition-all active:scale-95 flex items-center justify-center gap-3 relative z-10">
                         Assess Performance
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14l-4-4m0 8l4-4"/></svg>
                     </button>
@@ -195,7 +200,120 @@
                     <p class="text-xs text-slate-300 font-bold uppercase tracking-widest mt-1">Anda belum memimpin tim atau belum ada anggota yang terdaftar.</p>
                 </div>
             @else
-                <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+                {{-- ===== TAMPILAN MOBILE (kartu, < md) ===== --}}
+                <div class="block md:hidden space-y-3">
+                    @foreach($membersData as $mId => $member)
+                        @foreach($member['teams'] as $index => $team)
+                            @php $key = "{$mId}_{$team->id}"; @endphp
+                            <div
+                                x-data="{
+                                    hasWork: @entangle('formState.' . $key . '.has_work'),
+                                    volume: @entangle('formState.' . $key . '.volume_work'),
+                                    quality: @entangle('formState.' . $key . '.quality_work'),
+                                    isDirty: @entangle('formState.' . $key . '.is_dirty'),
+                                    isRated: @entangle('formState.' . $key . '.is_rated')
+                                }"
+                                class="bg-white rounded-2xl shadow-sm overflow-hidden border-l-4 transition-all"
+                                :class="!isRated ? 'border border-rose-200 border-l-rose-400' : 'border border-emerald-100 border-l-emerald-400'"
+                            >
+                                {{-- Header kartu --}}
+                                <div class="px-4 py-3 flex items-start justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
+                                    <div>
+                                        <p class="text-sm font-black text-slate-800 uppercase tracking-tight leading-none">{{ $member['name'] }}</p>
+                                        <p class="text-[9px] font-mono font-bold text-slate-400 mt-1">NIP: {{ $member['nip'] }}</p>
+                                        <span class="inline-block mt-1.5 text-[9px] font-black text-minimal-indigo uppercase italic tracking-tight px-2 py-0.5 bg-indigo-50 rounded-md">{{ $team->team_name }}</span>
+                                    </div>
+                                    <span
+                                        class="shrink-0 text-[9px] font-black uppercase px-2.5 py-1 rounded-full mt-0.5"
+                                        :class="isRated ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'"
+                                        x-text="isRated ? '✓ Dinilai' : '○ Belum'"
+                                    ></span>
+                                </div>
+
+                                {{-- Ada Pekerjaan --}}
+                                <div class="px-4 py-3 flex items-center justify-between border-b border-slate-50">
+                                    <span class="text-xs font-black text-slate-600 uppercase tracking-wide">Ada Pekerjaan?</span>
+                                    <input
+                                        x-model="hasWork"
+                                        @change="isDirty = true"
+                                        type="checkbox"
+                                        class="w-6 h-6 text-minimal-indigo bg-white border-slate-300 rounded focus:ring-minimal-indigo focus:ring-2 cursor-pointer transition-all"
+                                    >
+                                </div>
+
+                                {{-- Nilai Dasar --}}
+                                <div class="px-4 py-3 flex items-center justify-between border-b border-slate-50 transition-opacity" :class="hasWork ? 'opacity-100' : 'opacity-30 pointer-events-none'">
+                                    <span class="text-xs font-black text-slate-600 uppercase tracking-wide">Nilai Dasar</span>
+                                    <input
+                                        wire:model.live.debounce.500ms="formState.{{ $key }}.score"
+                                        @input="isDirty = true"
+                                        type="number"
+                                        class="w-20 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-center text-sm font-black text-minimal-indigo focus:ring-4 focus:ring-minimal-indigo/10 focus:border-minimal-indigo transition-all shadow-inner"
+                                        placeholder="--"
+                                    >
+                                </div>
+
+                                {{-- Volume/Kesulitan --}}
+                                <div class="px-4 py-3 border-b border-slate-50 transition-opacity" :class="hasWork ? 'opacity-100' : 'opacity-30 pointer-events-none'">
+                                    <p class="text-xs font-black text-slate-600 uppercase tracking-wide mb-2">Volume / Kesulitan</p>
+                                    <div class="flex gap-2">
+                                        @foreach(['Ringan', 'Sedang', 'Berat'] as $v)
+                                            <button
+                                                @click="volume = '{{ $v }}'; isDirty = true"
+                                                class="flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all border"
+                                                :class="volume === '{{ $v }}' ? 'bg-minimal-indigo border-minimal-indigo text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-400'"
+                                            >{{ $v }}</button>
+                                        @endforeach
+                                    </div>
+                                </div>
+
+                                {{-- Kualitas Kerja --}}
+                                <div class="px-4 py-3 border-b border-slate-50 transition-opacity" :class="hasWork ? 'opacity-100' : 'opacity-30 pointer-events-none'">
+                                    <p class="text-xs font-black text-slate-600 uppercase tracking-wide mb-2">Kualitas Kerja</p>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        @foreach(['Kurang', 'Cukup', 'Baik', 'Sangat Baik'] as $q)
+                                            <button
+                                                @click="quality = '{{ $q }}'; isDirty = true"
+                                                class="py-2 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all border"
+                                                :class="quality === '{{ $q }}' ? 'bg-minimal-indigo border-minimal-indigo text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-400'"
+                                            >{{ $q }}</button>
+                                        @endforeach
+                                    </div>
+                                </div>
+
+                                {{-- Aksi --}}
+                                <div class="px-4 py-3 flex gap-3">
+                                    <button
+                                        wire:click="saveRating('{{ $key }}')"
+                                        wire:loading.attr="disabled"
+                                        class="flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                                        :class="isDirty ? 'bg-slate-900 text-white shadow-md' : (isRated ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-100 text-slate-400 cursor-not-allowed')"
+                                        :disabled="!isDirty && !isRated"
+                                    >
+                                        <span wire:loading.remove wire:target="saveRating('{{ $key }}')">
+                                            <template x-if="isRated && !isDirty"><span>✓ Tersimpan</span></template>
+                                            <template x-if="!isRated || isDirty"><span>Simpan Nilai</span></template>
+                                        </span>
+                                        <span wire:loading wire:target="saveRating('{{ $key }}')">Menyimpan...</span>
+                                    </button>
+                                    @if($formState[$key]['is_rated'])
+                                        <button
+                                            wire:click="confirmReset('{{ $key }}')"
+                                            wire:loading.attr="disabled"
+                                            class="px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest bg-rose-50 text-rose-500 hover:bg-rose-100 border border-rose-100 transition-all active:scale-95"
+                                        >
+                                            <span wire:loading.remove wire:target="confirmReset('{{ $key }}')">Reset</span>
+                                            <span wire:loading wire:target="confirmReset('{{ $key }}')">...</span>
+                                        </button>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    @endforeach
+                </div>
+
+                {{-- ===== TAMPILAN DESKTOP (tabel, md+) ===== --}}
+                <div class="hidden md:block bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
                             <thead class="bg-slate-50/80 sticky top-0 z-10">
@@ -213,10 +331,9 @@
                                 @foreach($membersData as $mId => $member)
                                     @foreach($member['teams'] as $index => $team)
                                         @php $key = "{$mId}_{$team->id}"; @endphp
-                                        <tr 
-                                            x-data="{ 
+                                        <tr
+                                            x-data="{
                                                 hasWork: @entangle('formState.' . $key . '.has_work'),
-                                                score: @entangle('formState.' . $key . '.score'),
                                                 volume: @entangle('formState.' . $key . '.volume_work'),
                                                 quality: @entangle('formState.' . $key . '.quality_work'),
                                                 isDirty: @entangle('formState.' . $key . '.is_dirty'),
@@ -251,51 +368,44 @@
                                             </td>
 
                                             <td class="px-4 py-3 text-center">
-                                                <input 
-                                                    wire:click="updateField('{{ $key }}', 'has_work', $event.target.checked)"
+                                                <input
                                                     x-model="hasWork"
-                                                    type="checkbox" 
+                                                    @change="isDirty = true"
+                                                    type="checkbox"
                                                     class="w-5 h-5 text-minimal-indigo bg-white border-slate-300 rounded focus:ring-minimal-indigo focus:ring-2 cursor-pointer transition-all"
                                                 >
                                             </td>
-        
+
                                             <td class="px-3 py-3 text-center transition-opacity" :class="hasWork ? 'opacity-100' : 'opacity-30 pointer-events-none'">
-                                                <input 
-                                                    wire:model.live.debounce.300ms="formState.{{ $key }}.score"
-                                                    x-model="score"
-                                                    type="number" 
+                                                <input
+                                                    wire:model.live.debounce.500ms="formState.{{ $key }}.score"
+                                                    @input="isDirty = true"
+                                                    type="number"
                                                     class="w-16 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-center text-sm font-black text-minimal-indigo focus:ring-4 focus:ring-minimal-indigo/10 focus:border-minimal-indigo transition-all shadow-inner"
                                                     placeholder="--"
-                                                    @input="$wire.updateField('{{ $key }}', 'score', $event.target.value)"
                                                 >
                                             </td>
-        
+
                                             <td class="px-3 py-3 transition-opacity" :class="hasWork ? 'opacity-100' : 'opacity-30 pointer-events-none'">
                                                 <div class="flex flex-wrap gap-1.5 items-center">
                                                     @foreach(['Ringan', 'Sedang', 'Berat'] as $v)
-                                                        <button 
-                                                            wire:click="updateField('{{ $key }}', 'volume_work', '{{ $v }}')"
+                                                        <button
                                                             @click="volume = '{{ $v }}'; isDirty = true"
                                                             class="px-2.5 py-1.5 rounded-md text-[9px] font-black uppercase tracking-tighter transition-all border"
                                                             :class="volume === '{{ $v }}' ? 'bg-minimal-indigo border-minimal-indigo text-white shadow-sm shrink-0' : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600 shrink-0'"
-                                                        >
-                                                            {{ $v }}
-                                                        </button>
+                                                        >{{ $v }}</button>
                                                     @endforeach
                                                 </div>
                                             </td>
-        
+
                                             <td class="px-3 py-3 transition-opacity" :class="hasWork ? 'opacity-100' : 'opacity-30 pointer-events-none'">
                                                 <div class="flex flex-wrap gap-1.5 items-center">
                                                     @foreach(['Kurang', 'Cukup', 'Baik', 'Sangat Baik'] as $q)
-                                                        <button 
-                                                            wire:click="updateField('{{ $key }}', 'quality_work', '{{ $q }}')"
+                                                        <button
                                                             @click="quality = '{{ $q }}'; isDirty = true"
                                                             class="px-2.5 py-1.5 rounded-md text-[9px] font-black uppercase tracking-tighter transition-all border"
                                                             :class="quality === '{{ $q }}' ? 'bg-minimal-indigo border-minimal-indigo text-white shadow-sm shrink-0' : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600 shrink-0'"
-                                                        >
-                                                            {{ $q }}
-                                                        </button>
+                                                        >{{ $q }}</button>
                                                     @endforeach
                                                 </div>
                                             </td>
@@ -503,7 +613,7 @@
 
     @script
     <script>
-        const initChart = (passedData = null) => {
+        window.initChart = (passedData = null) => {
             const chartDiv = document.querySelector("#ketuaBarChart");
             const dataScript = document.querySelector("#ketuaStatsData");
             if (!chartDiv) return;
@@ -570,12 +680,43 @@
             window.ketuaBarChartInstance.render();
         };
 
-        setTimeout(() => initChart(), 50);
-        
+        setTimeout(() => window.initChart(), 50);
+
         Livewire.on('refreshKetuaCharts', (event) => {
             const data = event.chartData || null;
-            setTimeout(() => initChart(data), 50);
+            setTimeout(() => window.initChart(data), 50);
         });
     </script>
     @endscript
+
+    {{-- ===== BOTTOM NAV BAR (mobile only, < md) ===== --}}
+    <div class="fixed bottom-0 left-0 right-0 z-50 md:hidden">
+        {{-- Safe area untuk iPhone --}}
+        <div class="bg-white border-t border-slate-100 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+            <div class="flex">
+                <button
+                    @click="activeTab = 'dashboard'"
+                    class="flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-all active:scale-95"
+                    :class="activeTab === 'dashboard' ? 'text-minimal-indigo' : 'text-slate-400'"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transition-transform" :class="activeTab === 'dashboard' ? 'scale-110' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" rx="2" ry="2" x="3" y="3"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></svg>
+                    <span class="text-[9px] font-black uppercase tracking-widest">Dashboard</span>
+                    <span class="h-0.5 w-5 rounded-full transition-all" :class="activeTab === 'dashboard' ? 'bg-minimal-indigo' : 'bg-transparent'"></span>
+                </button>
+
+                {{-- Divider --}}
+                <div class="w-px bg-slate-100 my-2"></div>
+
+                <button
+                    @click="activeTab = 'input'"
+                    class="flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-all active:scale-95"
+                    :class="activeTab === 'input' ? 'text-minimal-indigo' : 'text-slate-400'"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transition-transform" :class="activeTab === 'input' ? 'scale-110' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <span class="text-[9px] font-black uppercase tracking-widest">Input Nilai</span>
+                    <span class="h-0.5 w-5 rounded-full transition-all" :class="activeTab === 'input' ? 'bg-minimal-indigo' : 'bg-transparent'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
 </div>

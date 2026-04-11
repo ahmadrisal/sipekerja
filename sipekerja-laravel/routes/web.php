@@ -5,6 +5,8 @@ use App\Livewire\Dashboard;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
+Route::get('/offline', fn() => view('offline'))->name('offline');
+
 Route::get('/', function () {
     return Auth::check() ? redirect('/dashboard') : redirect('/login');
 });

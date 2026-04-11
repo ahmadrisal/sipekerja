@@ -34,7 +34,7 @@ class DashboardService
     {
         // Fetch users with their teams and ratings for the period
         $users = User::with([
-            'teams',
+            'teams.leader',
             'ratingsReceived' => function($query) use ($month, $year) {
                 $query->where('period_month', $month)->where('period_year', $year);
             }
@@ -65,7 +65,7 @@ class DashboardService
                 return [
                     'teamId' => $team->id,
                     'teamName' => $team->team_name,
-                    'leaderName' => $team->leader->name ?? '-',
+                    'leaderName' => $team->leader?->name ?? '-',
                     'score' => $score
                 ];
             });
@@ -121,7 +121,7 @@ class DashboardService
                 return [
                     'team_id' => $team->id,
                     'team_name' => $team->team_name,
-                    'leader_name' => $team->leader->name ?? '-',
+                    'leader_name' => $team->leader?->name ?? '-',
                     'pending_count' => $unratedMembers->count(),
                     'pending_members' => $unratedMembers->pluck('name')->toArray()
                 ];
@@ -143,7 +143,7 @@ class DashboardService
                 if (!$hasRating) {
                     $missingTeams[] = [
                         'team_name' => $team->team_name,
-                        'leader_name' => $team->leader->name ?? '-'
+                        'leader_name' => $team->leader?->name ?? '-'
                     ];
                 }
             }
@@ -246,13 +246,13 @@ class DashboardService
                 'totalTeams' => $teams->count(),
                 'unassignedUsersCount' => $unassignedUsers->count(),
                 'largestTeam' => [
-                    'teamName' => $largestTeam->team_name ?? '-',
-                    'count' => $largestTeam->members->count() ?? 0
+                    'teamName' => $largestTeam?->team_name ?? '-',
+                    'count' => $largestTeam?->members->count() ?? 0
                 ],
                 'avgMembersPerTeam' => $avgMembersPerTeam,
                 'mostTeamsEmployee' => [
-                    'name' => $mostTeamsEmployee->name ?? '-',
-                    'count' => $mostTeamsEmployee->teams->count() ?? 0
+                    'name' => $mostTeamsEmployee?->name ?? '-',
+                    'count' => $mostTeamsEmployee?->teams->count() ?? 0
                 ],
                 'minTeamsPerEmployee' => $minTeamsPerEmployee,
                 'avgTeamsPerEmployee' => $avgTeamsPerEmployee,

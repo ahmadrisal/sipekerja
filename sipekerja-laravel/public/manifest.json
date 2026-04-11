@@ -1,0 +1,24 @@
+{
+    "name": "SIPEKERJA - BPS Sulawesi Tengah",
+    "short_name": "SIPEKERJA",
+    "description": "Sistem Penilaian Kinerja Bulanan BPS Provinsi Sulawesi Tengah",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#003366",
+    "theme_color": "#003366",
+    "orientation": "portrait",
+    "lang": "id",
+    "icons": [
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

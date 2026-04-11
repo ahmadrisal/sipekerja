@@ -7,6 +7,15 @@
 
     <title>{{ $title ?? config('app.name', 'SIPEKERJA') }}</title>
 
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#003366">
+    <!-- iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SIPEKERJA">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -64,5 +73,10 @@
     @livewireScripts
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     @stack('scripts')
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+    </script>
 </body>
 </html>
