@@ -34,6 +34,12 @@
                 </div>
                 <span class="text-xs uppercase tracking-widest leading-none">Data Pegawai</span>
             </a>
+            <a href="{{ route('konfigurasi') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-xl {{ request()->is('konfigurasi*') ? 'bg-white/10 text-white font-bold' : 'text-blue-100/70 hover:bg-white/5 hover:text-white' }} transition-all group">
+                <div class="w-6 h-6 rounded-md {{ request()->is('konfigurasi*') ? 'text-white' : 'text-blue-300/60' }} flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 1.41 13.42"/><path d="M4.93 4.93A10 10 0 0 0 3.52 18.35"/><path d="M20 12h2"/><path d="M2 12h2"/><path d="M12 2v2"/><path d="M12 20v2"/></svg>
+                </div>
+                <span class="text-xs uppercase tracking-widest leading-none">Bobot Penilaian</span>
+            </a>
         @endif
 
 

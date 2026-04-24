@@ -5,6 +5,7 @@ namespace App\Livewire\Penilaian;
 
 
 use App\Models\Rating;
+use App\Models\ScoringConfig;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -121,19 +122,29 @@ class Index extends Component
         session()->flash('success', 'Penilaian berhasil disimpan.');
     }
 
-    private function calculateFinalScore($score, $volumeWork, $qualityWork)
+    private function calculateFinalScore($score, $volumeWork, $qualityWork): float
     {
-        $volScore = 80;
-        if ($volumeWork === 'Ringan') $volScore = 60;
-        else if ($volumeWork === 'Berat') $volScore = 100;
+        $c = ScoringConfig::getAll();
 
-        $qualScore = 75;
-        if ($qualityWork === 'Kurang') $qualScore = 50;
-        else if ($qualityWork === 'Baik') $qualScore = 90;
-        else if ($qualityWork === 'Sangat Baik') $qualScore = 100;
+        $volScore = match($volumeWork) {
+            'Ringan' => $c['volume_ringan'] ?? 60,
+            'Berat'  => $c['volume_berat']  ?? 100,
+            default  => $c['volume_sedang'] ?? 80,
+        };
 
-        $final = ($score * 0.8) + ($volScore * 0.1) + ($qualScore * 0.1);
-        return round($final, 2);
+        $qualScore = match($qualityWork) {
+            'Kurang'      => $c['quality_kurang']      ?? 50,
+            'Cukup'       => $c['quality_cukup']       ?? 75,
+            'Baik'        => $c['quality_baik']        ?? 90,
+            'Sangat Baik' => $c['quality_sangat_baik'] ?? 100,
+            default       => $c['quality_cukup']       ?? 75,
+        };
+
+        $wScore   = ($c['weight_score']   ?? 80) / 100;
+        $wVolume  = ($c['weight_volume']  ?? 10) / 100;
+        $wQuality = ($c['weight_quality'] ?? 10) / 100;
+
+        return round(($score * $wScore) + ($volScore * $wVolume) + ($qualScore * $wQuality), 2);
     }
 
     public function render()
@@ -158,9 +169,23 @@ class Index extends Component
             }
         }
 
+        $c = ScoringConfig::getAll();
+
         return view('livewire.penilaian.index', [
-            'members' => $membersData,
-            'monthNames' => ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+            'members'    => $membersData,
+            'monthNames' => ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
+            'scoringConfig' => [
+                'weight_score'        => $c['weight_score']        ?? 80,
+                'weight_volume'       => $c['weight_volume']       ?? 10,
+                'weight_quality'      => $c['weight_quality']      ?? 10,
+                'volume_ringan'       => $c['volume_ringan']       ?? 60,
+                'volume_sedang'       => $c['volume_sedang']       ?? 80,
+                'volume_berat'        => $c['volume_berat']        ?? 100,
+                'quality_kurang'      => $c['quality_kurang']      ?? 50,
+                'quality_cukup'       => $c['quality_cukup']       ?? 75,
+                'quality_baik'        => $c['quality_baik']        ?? 90,
+                'quality_sangat_baik' => $c['quality_sangat_baik'] ?? 100,
+            ],
         ]);
     }
 }

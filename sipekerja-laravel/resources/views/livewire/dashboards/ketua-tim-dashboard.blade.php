@@ -24,6 +24,9 @@
             <button @click="activeTab = 'input'" class="px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all" :class="activeTab === 'input' ? 'bg-minimal-indigo text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'">
                 Input Nilai
             </button>
+            <button @click="activeTab = 'kabkot'" class="px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all" :class="activeTab === 'kabkot' ? 'bg-minimal-indigo text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'">
+                Penilaian Kabkot
+            </button>
         </div>
     </div>
 
@@ -200,6 +203,8 @@
                     <p class="text-xs text-slate-300 font-bold uppercase tracking-widest mt-1">Anda belum memimpin tim atau belum ada anggota yang terdaftar.</p>
                 </div>
             @else
+                @php $sc = $scoringConfig; @endphp
+
                 {{-- ===== TAMPILAN MOBILE (kartu, < md) ===== --}}
                 <div class="block md:hidden space-y-3">
                     @foreach($membersData as $mId => $member)
@@ -208,26 +213,52 @@
                             <div
                                 x-data="{
                                     hasWork: @entangle('formState.' . $key . '.has_work'),
+                                    score: @entangle('formState.' . $key . '.score'),
                                     volume: @entangle('formState.' . $key . '.volume_work'),
                                     quality: @entangle('formState.' . $key . '.quality_work'),
                                     isDirty: @entangle('formState.' . $key . '.is_dirty'),
-                                    isRated: @entangle('formState.' . $key . '.is_rated')
+                                    isRated: @entangle('formState.' . $key . '.is_rated'),
+                                    overridden: @entangle('formState.' . $key . '.overridden'),
+                                    cfg: @js($sc),
+                                    get finalScore() {
+                                        if (!this.hasWork) return 'N/A';
+                                        if (!this.score) return '-';
+                                        let v = this.volume === 'Berat' ? this.cfg.volume_berat : (this.volume === 'Ringan' ? this.cfg.volume_ringan : this.cfg.volume_sedang);
+                                        let q = this.quality === 'Sangat Baik' ? this.cfg.quality_sangat_baik : (this.quality === 'Baik' ? this.cfg.quality_baik : (this.quality === 'Kurang' ? this.cfg.quality_kurang : this.cfg.quality_cukup));
+                                        return ((this.score * this.cfg.weight_score / 100) + (v * this.cfg.weight_volume / 100) + (q * this.cfg.weight_quality / 100)).toFixed(2);
+                                    }
                                 }"
                                 class="bg-white rounded-2xl shadow-sm overflow-hidden border-l-4 transition-all"
-                                :class="!isRated ? 'border border-rose-200 border-l-rose-400' : 'border border-emerald-100 border-l-emerald-400'"
+                                :class="overridden ? 'border border-amber-200 border-l-amber-400' : (!isRated ? 'border border-rose-200 border-l-rose-400' : 'border border-emerald-100 border-l-emerald-400')"
                             >
-                                {{-- Header kartu --}}
-                                <div class="px-4 py-3 flex items-start justify-between gap-3 bg-slate-50/50 border-b border-slate-100">
-                                    <div>
+                                {{-- Header kartu: nama + nilai akhir --}}
+                                <div class="flex items-stretch border-b border-slate-100">
+                                    <div class="flex-1 px-4 py-3 bg-slate-50/50">
                                         <p class="text-sm font-black text-slate-800 uppercase tracking-tight leading-none">{{ $member['name'] }}</p>
                                         <p class="text-[9px] font-mono font-bold text-slate-400 mt-1">NIP: {{ $member['nip'] }}</p>
                                         <span class="inline-block mt-1.5 text-[9px] font-black text-minimal-indigo uppercase italic tracking-tight px-2 py-0.5 bg-indigo-50 rounded-md">{{ $team->team_name }}</span>
+                                        <template x-if="overridden">
+                                            <span class="inline-flex items-center gap-1 ml-1 mt-1.5 text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                                Diubah Pimpinan
+                                            </span>
+                                        </template>
+                                        <span
+                                            x-show="!overridden"
+                                            class="inline-block ml-1 mt-1.5 text-[9px] font-black uppercase px-2 py-0.5 rounded-full"
+                                            :class="isRated ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'"
+                                            x-text="isRated ? '✓ Dinilai' : '○ Belum'"
+                                        ></span>
                                     </div>
-                                    <span
-                                        class="shrink-0 text-[9px] font-black uppercase px-2.5 py-1 rounded-full mt-0.5"
-                                        :class="isRated ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'"
-                                        x-text="isRated ? '✓ Dinilai' : '○ Belum'"
-                                    ></span>
+                                    {{-- Nilai Akhir Badge --}}
+                                    <div class="flex flex-col items-center justify-center px-5 bg-gradient-to-br from-slate-800 to-minimal-indigo min-w-[80px]">
+                                        <span
+                                            x-text="finalScore"
+                                            class="text-2xl font-black italic tracking-tighter leading-none"
+                                            :class="(score || !hasWork) ? 'text-white' : 'text-white/30'"
+                                        ></span>
+                                        <span class="text-[8px] font-black uppercase tracking-widest text-indigo-200 mt-1">Nilai Akhir</span>
+                                    </div>
                                 </div>
 
                                 {{-- Ada Pekerjaan --}}
@@ -245,7 +276,7 @@
                                 <div class="px-4 py-3 flex items-center justify-between border-b border-slate-50 transition-opacity" :class="hasWork ? 'opacity-100' : 'opacity-30 pointer-events-none'">
                                     <span class="text-xs font-black text-slate-600 uppercase tracking-wide">Nilai Dasar</span>
                                     <input
-                                        wire:model.live.debounce.500ms="formState.{{ $key }}.score"
+                                        x-model="score"
                                         @input="isDirty = true"
                                         type="number"
                                         class="w-20 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-center text-sm font-black text-minimal-indigo focus:ring-4 focus:ring-minimal-indigo/10 focus:border-minimal-indigo transition-all shadow-inner"
@@ -324,6 +355,7 @@
                                     <th class="px-4 py-4 border-b border-slate-100 text-center">Nilai Dasar</th>
                                     <th class="px-4 py-4 border-b border-slate-100">Volume/Kesulitan</th>
                                     <th class="px-4 py-4 border-b border-slate-100">Kualitas Kerja</th>
+                                    <th class="px-4 py-4 border-b border-slate-100 text-center text-minimal-indigo italic underline decoration-minimal-indigo/30 decoration-dashed underline-offset-4">Nilai Akhir</th>
                                     <th class="px-5 py-4 border-b border-slate-100 text-right">Aksi</th>
                                 </tr>
                             </thead>
@@ -334,13 +366,23 @@
                                         <tr
                                             x-data="{
                                                 hasWork: @entangle('formState.' . $key . '.has_work'),
+                                                score: @entangle('formState.' . $key . '.score'),
                                                 volume: @entangle('formState.' . $key . '.volume_work'),
                                                 quality: @entangle('formState.' . $key . '.quality_work'),
                                                 isDirty: @entangle('formState.' . $key . '.is_dirty'),
-                                                isRated: @entangle('formState.' . $key . '.is_rated')
+                                                isRated: @entangle('formState.' . $key . '.is_rated'),
+                                                overridden: @entangle('formState.' . $key . '.overridden'),
+                                                cfg: @js($sc),
+                                                get finalScore() {
+                                                    if (!this.hasWork) return 'N/A';
+                                                    if (!this.score) return '-';
+                                                    let v = this.volume === 'Berat' ? this.cfg.volume_berat : (this.volume === 'Ringan' ? this.cfg.volume_ringan : this.cfg.volume_sedang);
+                                                    let q = this.quality === 'Sangat Baik' ? this.cfg.quality_sangat_baik : (this.quality === 'Baik' ? this.cfg.quality_baik : (this.quality === 'Kurang' ? this.cfg.quality_kurang : this.cfg.quality_cukup));
+                                                    return ((this.score * this.cfg.weight_score / 100) + (v * this.cfg.weight_volume / 100) + (q * this.cfg.weight_quality / 100)).toFixed(2);
+                                                }
                                             }"
                                             class="group transition-colors"
-                                            :class="!isRated ? 'bg-rose-100/50' : 'hover:bg-slate-50/50'"
+                                            :class="overridden ? 'bg-amber-50/50' : (!isRated ? 'bg-rose-100/50' : 'hover:bg-slate-50/50')"
                                         >
                                             @if($index === 0)
                                                 <td rowspan="{{ count($member['teams']) }}" class="px-4 py-3 align-top border-r border-slate-50 bg-white shadow-[1px_0_0_0_rgba(241,245,249,1)]">
@@ -362,9 +404,15 @@
                                                     </div>
                                                 </td>
                                             @endif
-                                            
-                                            <td class="px-5 py-4 font-black text-minimal-indigo uppercase text-[10px] italic tracking-tight">
-                                                {{ $team->team_name }}
+
+                                            <td class="px-5 py-4">
+                                                <p class="font-black text-minimal-indigo uppercase text-[10px] italic tracking-tight">{{ $team->team_name }}</p>
+                                                <template x-if="overridden">
+                                                    <span class="inline-flex items-center gap-1 mt-1 text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                                        Diubah Pimpinan
+                                                    </span>
+                                                </template>
                                             </td>
 
                                             <td class="px-4 py-3 text-center">
@@ -378,7 +426,7 @@
 
                                             <td class="px-3 py-3 text-center transition-opacity" :class="hasWork ? 'opacity-100' : 'opacity-30 pointer-events-none'">
                                                 <input
-                                                    wire:model.live.debounce.500ms="formState.{{ $key }}.score"
+                                                    x-model="score"
                                                     @input="isDirty = true"
                                                     type="number"
                                                     class="w-16 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-center text-sm font-black text-minimal-indigo focus:ring-4 focus:ring-minimal-indigo/10 focus:border-minimal-indigo transition-all shadow-inner"
@@ -409,12 +457,22 @@
                                                     @endforeach
                                                 </div>
                                             </td>
-        
 
-        
+                                            {{-- Nilai Akhir --}}
+                                            <td class="px-4 py-3 text-center">
+                                                <div class="flex flex-col items-center gap-0.5">
+                                                    <span
+                                                        x-text="finalScore"
+                                                        class="text-xl font-black italic tracking-tighter"
+                                                        :class="finalScore === '-' || finalScore === 'N/A' ? 'text-slate-300' : 'text-minimal-indigo'"
+                                                    ></span>
+                                                    <span class="text-[8px] font-black uppercase tracking-widest text-slate-300">nilai akhir</span>
+                                                </div>
+                                            </td>
+
                                             <td class="px-4 py-3 text-right">
                                                 <div class="flex flex-col gap-1.5 items-end">
-                                                    <button 
+                                                    <button
                                                         wire:click="saveRating('{{ $key }}')"
                                                         wire:loading.attr="disabled"
                                                         class="w-full min-w-[80px] relative px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
@@ -436,7 +494,7 @@
                                                     </button>
 
                                                     @if($formState[$key]['is_rated'])
-                                                        <button 
+                                                        <button
                                                             wire:click="confirmReset('{{ $key }}')"
                                                             wire:loading.attr="disabled"
                                                             class="w-full min-w-[80px] relative px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 bg-rose-50 text-rose-500 hover:bg-rose-100 border border-rose-100"
@@ -493,6 +551,210 @@
             </div>
         @endif
 
+    {{-- ===== TAB: PENILAIAN KABKOT ===== --}}
+    <div x-show="activeTab === 'kabkot'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
+        <div class="space-y-4">
+
+            {{-- Flash success --}}
+            @if(session('kabkot_success'))
+                <div class="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl animate-in fade-in duration-300">
+                    <div class="w-7 h-7 bg-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <p class="text-xs font-black text-emerald-700 uppercase tracking-tight">{{ session('kabkot_success') }}</p>
+                </div>
+            @endif
+
+            @if(empty($kabkotData))
+                <div class="bg-white py-20 rounded-[3rem] border-2 border-dashed border-slate-200 text-center">
+                    <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </div>
+                    <p class="text-xl font-black text-slate-400 uppercase italic">Tidak Ada Kepala Kabkot</p>
+                    <p class="text-xs text-slate-300 font-bold uppercase tracking-widest mt-1">Belum ada pengguna dengan role Kepala Kabkot.</p>
+                </div>
+            @else
+
+            {{-- ===== MOBILE CARDS (< md) ===== --}}
+            <div class="block md:hidden space-y-4">
+                @foreach($kabkotData as $kabkotId => $kabkot)
+                    {{-- Kabkot Header --}}
+                    <div class="bg-gradient-to-br from-slate-800 to-minimal-indigo rounded-2xl px-5 py-4 flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-black text-white uppercase tracking-tight leading-none">{{ $kabkot['kabkot_name'] }}</p>
+                            <p class="text-[9px] font-mono font-bold text-indigo-300 mt-1">NIP: {{ $kabkot['kabkot_nip'] }}</p>
+                        </div>
+                        @php
+                            $allRatedMobile = collect($kabkot['teams'])->every(fn($t) => $kabkotFormState[$t['key']]['is_rated']);
+                        @endphp
+                        <span class="text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full {{ $allRatedMobile ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300' }}">
+                            {{ $allRatedMobile ? '✓ Lengkap' : 'Belum Lengkap' }}
+                        </span>
+                    </div>
+
+                    {{-- Per-team cards --}}
+                    <div class="space-y-2 ml-3">
+                        @foreach($kabkot['teams'] as $teamRow)
+                        @php $key = $teamRow['key']; @endphp
+                        <div
+                            x-data="{
+                                score: @entangle('kabkotFormState.' . $key . '.score'),
+                                isDirty: @entangle('kabkotFormState.' . $key . '.is_dirty'),
+                                isRated: @entangle('kabkotFormState.' . $key . '.is_rated'),
+                                overridden: @entangle('kabkotFormState.' . $key . '.overridden'),
+                            }"
+                            class="bg-white rounded-xl shadow-sm overflow-hidden border-l-4 transition-all"
+                            :class="overridden ? 'border border-amber-200 border-l-amber-400' : (isRated ? 'border border-emerald-100 border-l-emerald-400' : 'border border-rose-200 border-l-rose-400')"
+                        >
+                            <div class="flex items-center justify-between px-4 py-2.5 bg-slate-50/60 border-b border-slate-100">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-black text-minimal-indigo uppercase italic tracking-tight">{{ $teamRow['team_name'] }}</span>
+                                    <template x-if="overridden">
+                                        <span class="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded-full uppercase tracking-tight">Diubah Pimpinan</span>
+                                    </template>
+                                </div>
+                                <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-full"
+                                    :class="isRated ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'"
+                                    x-text="isRated ? '✓ Dinilai' : '○ Belum'"></span>
+                            </div>
+                            <div class="px-4 py-3 flex items-center gap-3">
+                                <span class="text-xs font-black text-slate-500 uppercase tracking-wide flex-shrink-0">Nilai</span>
+                                <input
+                                    x-model="score"
+                                    @input="isDirty = true"
+                                    type="number" min="1" max="100"
+                                    class="w-20 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-center text-sm font-black text-minimal-indigo focus:ring-4 focus:ring-minimal-indigo/10 focus:border-minimal-indigo transition-all shadow-inner"
+                                    placeholder="--"
+                                >
+                                <button
+                                    wire:click="saveKabkotRating('{{ $key }}')"
+                                    wire:loading.attr="disabled"
+                                    class="flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                                    :class="isDirty ? 'bg-slate-900 text-white' : (isRated ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-100 text-slate-400 cursor-not-allowed')"
+                                    :disabled="!isDirty && !isRated"
+                                >
+                                    <span wire:loading.remove wire:target="saveKabkotRating('{{ $key }}')">
+                                        <template x-if="isRated && !isDirty"><span>✓ Tersimpan</span></template>
+                                        <template x-if="!isRated || isDirty"><span>Simpan</span></template>
+                                    </span>
+                                    <span wire:loading wire:target="saveKabkotRating('{{ $key }}')">...</span>
+                                </button>
+                                @if($kabkotFormState[$key]['is_rated'])
+                                    <button wire:click="confirmResetKabkot('{{ $key }}')" class="px-3 py-2 rounded-xl text-[9px] font-black uppercase bg-rose-50 text-rose-500 border border-rose-100 active:scale-95">Reset</button>
+                                @endif
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                @endforeach
+            </div>
+
+            {{-- ===== DESKTOP TABLE (md+) ===== --}}
+            <div class="hidden md:block bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+                <div class="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-xl font-black text-slate-800 tracking-tight italic">Penilaian Kepala Kabupaten/Kota</h3>
+                        <p class="text-xs text-slate-400 font-mono uppercase tracking-tighter mt-0.5">{{ $monthNames[$month] ?? '...' }} {{ $year }}</p>
+                    </div>
+                    @php
+                        $totalKabkot = count($kabkotFormState);
+                        $ratedKabkot = collect($kabkotFormState)->filter(fn($e) => $e['is_rated'])->count();
+                    @endphp
+                    <span class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest {{ $ratedKabkot === $totalKabkot && $totalKabkot > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600' }}">
+                        {{ $ratedKabkot }}/{{ $totalKabkot }} Dinilai
+                    </span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50/80">
+                            <tr class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                <th class="px-6 py-4 border-b border-slate-100">Kepala Kabkot</th>
+                                <th class="px-5 py-4 border-b border-slate-100">Tim Penilai</th>
+                                <th class="px-4 py-4 border-b border-slate-100 text-center">Nilai (1–100)</th>
+                                <th class="px-5 py-4 border-b border-slate-100 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($kabkotData as $kabkotId => $kabkot)
+                                @foreach($kabkot['teams'] as $tIdx => $teamRow)
+                                @php $key = $teamRow['key']; @endphp
+                                <tr
+                                    x-data="{
+                                        score: @entangle('kabkotFormState.' . $key . '.score'),
+                                        isDirty: @entangle('kabkotFormState.' . $key . '.is_dirty'),
+                                        isRated: @entangle('kabkotFormState.' . $key . '.is_rated'),
+                                        overridden: @entangle('kabkotFormState.' . $key . '.overridden'),
+                                    }"
+                                    class="group border-t border-slate-50 transition-colors"
+                                    :class="overridden ? 'bg-amber-50/30' : (!isRated ? 'bg-rose-50/30' : 'hover:bg-slate-50/50')"
+                                >
+                                    {{-- Kabkot name cell — rowspan only on first team row --}}
+                                    @if($tIdx === 0)
+                                    <td rowspan="{{ count($kabkot['teams']) }}" class="px-6 py-4 align-top border-r border-slate-50 bg-white">
+                                        <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight leading-none">{{ $kabkot['kabkot_name'] }}</p>
+                                        <p class="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest mt-1">{{ $kabkot['kabkot_nip'] }}</p>
+                                        @php
+                                            $allRated = collect($kabkot['teams'])->every(fn($t) => $kabkotFormState[$t['key']]['is_rated']);
+                                        @endphp
+                                        @if(!$allRated)
+                                            <span class="mt-2 inline-flex items-center gap-1 px-2 py-0.5 bg-rose-100 text-rose-600 text-[8px] font-black rounded-full uppercase tracking-tight">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                                Belum Lengkap
+                                            </span>
+                                        @endif
+                                    </td>
+                                    @endif
+
+                                    <td class="px-5 py-4">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-black text-minimal-indigo uppercase text-[10px] italic tracking-tight">{{ $teamRow['team_name'] }}</span>
+                                            <template x-if="overridden">
+                                                <span class="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded-full uppercase tracking-tight">Diubah Pimpinan</span>
+                                            </template>
+                                        </div>
+                                    </td>
+
+                                    <td class="px-4 py-4 text-center">
+                                        <input
+                                            x-model="score"
+                                            @input="isDirty = true"
+                                            type="number" min="1" max="100"
+                                            class="w-20 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-center text-sm font-black text-minimal-indigo focus:ring-4 focus:ring-minimal-indigo/10 focus:border-minimal-indigo transition-all shadow-inner"
+                                            placeholder="--"
+                                        >
+                                    </td>
+
+                                    <td class="px-5 py-4 text-right">
+                                        <div class="flex gap-2 items-center justify-end">
+                                            <button
+                                                wire:click="saveKabkotRating('{{ $key }}')"
+                                                wire:loading.attr="disabled"
+                                                class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                                                :class="isDirty ? 'bg-slate-900 text-white shadow-md' : (isRated ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-100 text-slate-300 cursor-not-allowed')"
+                                                :disabled="!isDirty && !isRated"
+                                            >
+                                                <span wire:loading.remove wire:target="saveKabkotRating('{{ $key }}')">
+                                                    <template x-if="isRated && !isDirty"><span>✓ Tersimpan</span></template>
+                                                    <template x-if="!isRated || isDirty"><span>Simpan</span></template>
+                                                </span>
+                                                <span wire:loading wire:target="saveKabkotRating('{{ $key }}')">...</span>
+                                            </button>
+                                            @if($kabkotFormState[$key]['is_rated'])
+                                                <button wire:click="confirmResetKabkot('{{ $key }}')" class="px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-rose-50 text-rose-500 hover:bg-rose-100 border border-rose-100 transition-all active:scale-95">Reset</button>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
+        </div>
+    </div>
+
         <!-- Reset Confirmation Dialog -->
         @if($showResetDialog)
             <div class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm pointer-events-auto">
@@ -514,6 +776,41 @@
             </div>
         @endif
 
+        <!-- Kabkot Validation Dialog -->
+        @if($showKabkotValidationDialog)
+            <div class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm pointer-events-auto">
+                <div class="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl relative overflow-hidden flex flex-col p-8 animate-in zoom-in-95 duration-200 border-t-8 border-amber-400">
+                    <div class="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mb-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <h4 class="text-lg font-black text-slate-800 uppercase italic leading-none mb-2">Nilai Tidak Valid</h4>
+                    <p class="text-xs text-slate-500 font-medium mb-8">Masukkan nilai antara 1 sampai 100.</p>
+                    <button wire:click="$set('showKabkotValidationDialog', false)" class="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">
+                        Saya Mengerti
+                    </button>
+                </div>
+            </div>
+        @endif
+
+        <!-- Kabkot Reset Confirmation Dialog -->
+        @if($showKabkotResetDialog)
+            <div class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm pointer-events-auto">
+                <div class="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl relative overflow-hidden flex flex-col p-8 animate-in zoom-in-95 duration-200 border-t-8 border-rose-500">
+                    <div class="w-16 h-16 bg-rose-50 rounded-2xl flex items-center justify-center mb-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    </div>
+                    <h4 class="text-lg font-black text-slate-800 uppercase italic leading-none mb-2">Konfirmasi Reset</h4>
+                    <p class="text-xs text-slate-500 font-medium mb-8">Reset penilaian Kepala Kabkot ini? Data akan hilang permanen.</p>
+                    <div class="flex gap-3">
+                        <button type="button" wire:click="cancelResetKabkot" class="flex-1 py-4 bg-slate-50 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95">Batal</button>
+                        <button type="button" wire:click="executeResetKabkot" class="flex-1 py-4 bg-rose-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-rose-500/20 hover:bg-rose-600 transition-all active:scale-95 flex justify-center items-center gap-2">
+                            <span wire:loading.remove wire:target="executeResetKabkot">Ya, Reset</span>
+                            <span wire:loading wire:target="executeResetKabkot">Proses...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endif
 
     <!-- Management Dialogs (Modals) Dashboard -->
     @php $dialogs = [
@@ -715,6 +1012,18 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transition-transform" :class="activeTab === 'input' ? 'scale-110' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     <span class="text-[9px] font-black uppercase tracking-widest">Input Nilai</span>
                     <span class="h-0.5 w-5 rounded-full transition-all" :class="activeTab === 'input' ? 'bg-minimal-indigo' : 'bg-transparent'"></span>
+                </button>
+
+                <div class="w-px bg-slate-100 my-2"></div>
+
+                <button
+                    @click="activeTab = 'kabkot'"
+                    class="flex-1 flex flex-col items-center justify-center gap-1 py-3 transition-all active:scale-95"
+                    :class="activeTab === 'kabkot' ? 'text-minimal-indigo' : 'text-slate-400'"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 transition-transform" :class="activeTab === 'kabkot' ? 'scale-110' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    <span class="text-[9px] font-black uppercase tracking-widest">Kabkot</span>
+                    <span class="h-0.5 w-5 rounded-full transition-all" :class="activeTab === 'kabkot' ? 'bg-minimal-indigo' : 'bg-transparent'"></span>
                 </button>
             </div>
         </div>

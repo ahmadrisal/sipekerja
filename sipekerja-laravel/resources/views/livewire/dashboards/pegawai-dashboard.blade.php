@@ -70,7 +70,7 @@
     @endif
 
     <!-- Analytics Board (Charts Grid) -->
-    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- 6-Month Tend Chart -->
         <div class="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-100">
             <div class="mb-6 px-1">

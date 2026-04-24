@@ -24,6 +24,12 @@ Route::middleware(['auth', 'role.context'])->group(function () {
     Route::get('/teams', \App\Livewire\Teams\Index::class)->middleware('role.context:Admin')->name('teams');
     Route::get('/users', \App\Livewire\Users\Index::class)->middleware('role.context:Admin')->name('users');
     Route::get('/users/template-excel', [\App\Http\Controllers\ExcelTemplateController::class, 'download'])->middleware('role.context:Admin')->name('users.template');
+    Route::get('/konfigurasi', \App\Livewire\Konfigurasi\Index::class)->middleware('role.context:Admin')->name('konfigurasi');
+
+    // Export (Pimpinan)
+    Route::get('/export/nilai-pegawai',   [\App\Http\Controllers\ExportController::class, 'pegawai'])->middleware('role.context:Pimpinan')->name('export.pegawai');
+    Route::get('/export/nilai-ketua-tim', [\App\Http\Controllers\ExportController::class, 'ketuaTim'])->middleware('role.context:Pimpinan')->name('export.ketuaTim');
+    Route::get('/export/nilai-kabkot',    [\App\Http\Controllers\ExportController::class, 'kabkot'])->middleware('role.context:Pimpinan')->name('export.kabkot');
 
     Route::post('/logout', function () {
         Auth::logout();
