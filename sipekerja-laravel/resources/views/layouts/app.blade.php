@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $title ?? config('app.name', 'SIPEKERJA') }}</title>
+    <title>{{ $title ?? config('app.name', 'PAKAR') }}</title>
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
@@ -13,7 +13,7 @@
     <!-- iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="SIPEKERJA">
+    <meta name="apple-mobile-web-app-title" content="PAKAR">
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
     <!-- Fonts -->
@@ -60,7 +60,7 @@
                     {{ $slot }}
                 </main>
                 <footer class="p-6 text-center text-xs text-slate-500 border-t border-slate-200/60 bg-white">
-                    &copy; 2026 SIPEKERJA - Badan Pusat Statistik
+                    &copy; 2026 PAKAR - Badan Pusat Statistik
                 </footer>
             </div>
         @else

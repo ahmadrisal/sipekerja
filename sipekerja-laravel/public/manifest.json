@@ -1,7 +1,7 @@
 {
-    "name": "SIPEKERJA - BPS Sulawesi Tengah",
-    "short_name": "SIPEKERJA",
-    "description": "Sistem Penilaian Kinerja Bulanan BPS Provinsi Sulawesi Tengah",
+    "name": "PAKAR - BPS Sulawesi Tengah",
+    "short_name": "PAKAR",
+    "description": "Penilaian Kinerja Aparatur BPS Provinsi Sulawesi Tengah",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#003366",

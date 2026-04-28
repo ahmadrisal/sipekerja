@@ -2,17 +2,22 @@
 
 namespace App\Livewire\Teams;
 
-
-
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class Index extends Component
 {
-    use WithPagination;
+    use WithPagination, WithFileUploads;
 
     public $search = '';
     public $filterLeader = 'ALL';
@@ -32,6 +37,13 @@ class Index extends Component
     // Delete Modal State
     public $isDeleteModalOpen = false;
     public $deleteId = null;
+
+    // Import State
+    public $isImportModalOpen = false;
+    public $importFile = null;
+    public $importParsed = false;
+    public $importTeams = [];
+    public $importErrors = [];
 
     // All users for picker (cached in mount)
     public $allUsers = [];
@@ -228,6 +240,254 @@ class Index extends Component
         } else {
             $this->memberIds[] = $userId;
         }
+    }
+
+    // ── Import Tim ───────────────────────────────────────────────────
+
+    public function openImportModal(): void
+    {
+        $this->importFile   = null;
+        $this->importParsed = false;
+        $this->importTeams  = [];
+        $this->importErrors = [];
+        $this->isImportModalOpen = true;
+    }
+
+    public function closeImportModal(): void
+    {
+        $this->isImportModalOpen = false;
+        $this->importFile   = null;
+        $this->importParsed = false;
+        $this->importTeams  = [];
+        $this->importErrors = [];
+    }
+
+    public function updatedImportFile(): void
+    {
+        if (!$this->importFile) return;
+
+        $this->validate([
+            'importFile' => 'required|file|mimes:xlsx,xls|max:5120',
+        ]);
+
+        $this->parseImportExcel();
+    }
+
+    private function parseImportExcel(): void
+    {
+        $path        = $this->importFile->getRealPath();
+        $spreadsheet = IOFactory::load($path);
+        $sheet       = $spreadsheet->getActiveSheet();
+        $rows        = $sheet->toArray(null, true, true, true);
+
+        // Preload all users keyed by NIP for O(1) lookup
+        $allUsers       = User::get(['id', 'name', 'nip']);
+        $usersByNip     = $allUsers->keyBy(fn($u) => trim((string) $u->nip));
+        $existingNames  = Team::pluck('team_name')->map(fn($n) => strtolower(trim($n)))->toArray();
+
+        // --- Pass 1: group rows by team name ---
+        $rawGroups  = [];  // ['team_name' => ['leader_nip' => ..., 'member_nips' => [...]]]
+        $teamOrder  = [];  // preserve order
+        $currentKey = null;
+
+        foreach ($rows as $rowIdx => $row) {
+            if ($rowIdx === 1) continue; // header
+
+            $teamName  = trim($row['A'] ?? '');
+            $leaderNip = trim($row['B'] ?? '');
+            $memberNip = trim($row['C'] ?? '');
+
+            // Skip fully empty rows
+            if ($teamName === '' && $leaderNip === '' && $memberNip === '') continue;
+
+            // Skip instruction/marker rows
+            if (str_contains(strtolower($teamName), 'isi data') || str_contains($teamName, '---')) continue;
+
+            if ($teamName !== '') {
+                $currentKey = strtolower($teamName);
+                if (!isset($rawGroups[$currentKey])) {
+                    $rawGroups[$currentKey]  = ['original_name' => $teamName, 'leader_nip' => '', 'member_nips' => []];
+                    $teamOrder[]             = $currentKey;
+                }
+                if ($leaderNip !== '' && $rawGroups[$currentKey]['leader_nip'] === '') {
+                    $rawGroups[$currentKey]['leader_nip'] = $leaderNip;
+                }
+            }
+
+            if ($memberNip !== '' && $currentKey !== null) {
+                $rawGroups[$currentKey]['member_nips'][] = $memberNip;
+            }
+        }
+
+        // --- Pass 2: validate each team group ---
+        $validTeams   = [];
+        $errorGroups  = [];
+        $seenNames    = []; // within-file duplicate detection
+
+        foreach ($teamOrder as $key) {
+            $group      = $rawGroups[$key];
+            $teamName   = $group['original_name'];
+            $leaderNip  = $group['leader_nip'];
+            $memberNips = $group['member_nips'];
+            $errors     = [];
+
+            // Team name validation
+            if (strlen($teamName) < 3) {
+                $errors[] = 'Nama tim kurang dari 3 karakter';
+            }
+            if (in_array($key, $seenNames)) {
+                // Duplicate in file — already merged in pass 1, no error needed
+            }
+            $seenNames[] = $key;
+
+            // Duplicate in DB
+            if (in_array(strtolower($teamName), $existingNames)) {
+                $errors[] = "Nama tim '{$teamName}' sudah ada di database";
+            }
+
+            // Leader validation
+            $leaderId   = null;
+            $leaderName = null;
+            if ($leaderNip !== '') {
+                $leaderUser = $usersByNip->get($leaderNip);
+                if (!$leaderUser) {
+                    $errors[] = "NIP Ketua Tim tidak ditemukan: {$leaderNip}";
+                } else {
+                    $leaderId   = $leaderUser->id;
+                    $leaderName = $leaderUser->name;
+                }
+            }
+
+            // Must have at least leader or one member
+            if ($leaderNip === '' && count($memberNips) === 0) {
+                $errors[] = 'Tim tidak memiliki ketua maupun anggota';
+            }
+
+            if (!empty($errors)) {
+                $errorGroups[] = ['team_name' => $teamName, 'reasons' => $errors];
+                continue;
+            }
+
+            // Member validation — invalid members are skipped individually
+            $validMembers   = [];
+            $skippedMembers = [];
+            foreach ($memberNips as $nip) {
+                $u = $usersByNip->get($nip);
+                if (!$u) {
+                    $skippedMembers[] = ['nip' => $nip, 'reason' => 'NIP tidak ditemukan'];
+                } elseif ($u->id === $leaderId) {
+                    // skip silently — leader not counted as member
+                } else {
+                    // deduplicate within team
+                    if (!collect($validMembers)->contains('id', $u->id)) {
+                        $validMembers[] = ['id' => $u->id, 'name' => $u->name, 'nip' => $u->nip];
+                    }
+                }
+            }
+
+            $validTeams[] = [
+                'team_name'       => $teamName,
+                'leader_id'       => $leaderId,
+                'leader_name'     => $leaderName,
+                'leader_nip'      => $leaderNip ?: null,
+                'members'         => $validMembers,
+                'member_ids'      => array_column($validMembers, 'id'),
+                'skipped_members' => $skippedMembers,
+            ];
+        }
+
+        $this->importTeams  = $validTeams;
+        $this->importErrors = $errorGroups;
+        $this->importParsed = true;
+    }
+
+    public function confirmImport(): void
+    {
+        if (empty($this->importTeams)) return;
+
+        $count = 0;
+        foreach ($this->importTeams as $entry) {
+            DB::transaction(function () use ($entry) {
+                $team = Team::create([
+                    'team_name' => $entry['team_name'],
+                    'leader_id' => $entry['leader_id'],
+                ]);
+
+                $team->members()->sync($entry['member_ids']);
+
+                // Assign Ketua Tim role
+                if ($entry['leader_id']) {
+                    $leader = User::find($entry['leader_id']);
+                    if ($leader && !$leader->hasRole('Ketua Tim')) {
+                        $leader->assignRole('Ketua Tim');
+                    }
+                }
+
+                // Assign Pegawai role to members
+                foreach ($entry['member_ids'] as $mId) {
+                    $user = User::find($mId);
+                    if ($user && !$user->hasRole('Pegawai')) {
+                        $user->assignRole('Pegawai');
+                    }
+                }
+            });
+            $count++;
+        }
+
+        $this->closeImportModal();
+        session()->flash('success', "{$count} tim berhasil diimport, hak akses otomatis disesuaikan.");
+    }
+
+    public function downloadImportTemplate()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet       = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Import Tim');
+
+        // Headers
+        $headers = ['Nama Tim', 'NIP Ketua Tim', 'NIP Anggota'];
+        foreach ($headers as $i => $h) {
+            $col = chr(65 + $i);
+            $sheet->setCellValue("{$col}1", $h);
+            $sheet->getStyle("{$col}1")->applyFromArray([
+                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4F46E5']],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ]);
+            $sheet->getColumnDimensionByColumn($i + 1)->setWidth($i === 0 ? 30 : 22);
+        }
+
+        // Example data
+        $examples = [
+            ['Tim Pengawasan Wilayah I', '199001012010011001', '199501012020011001'],
+            ['',                         '',                   '199501012020011002'],
+            ['',                         '',                   '199501012020011003'],
+            ['Tim Pengawasan Wilayah II', '199002022010011002', '199601012021011001'],
+            ['',                          '',                   '199601012021011002'],
+        ];
+
+        foreach ($examples as $ri => $row) {
+            foreach ($row as $ci => $val) {
+                $col = chr(65 + $ci);
+                $sheet->setCellValue("{$col}" . ($ri + 2), $val);
+            }
+        }
+
+        // Instruction row (row 7, light red)
+        $sheet->setCellValue('A7', '← Nama Tim cukup diisi di baris pertama tiap tim');
+        $sheet->setCellValue('B7', '← NIP Ketua Tim cukup di baris pertama');
+        $sheet->setCellValue('C7', '← NIP Anggota satu per baris');
+        $sheet->getStyle('A7:C7')->applyFromArray([
+            'font' => ['italic' => true, 'color' => ['rgb' => '991B1B']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEE2E2']],
+        ]);
+
+        $writer   = new Xlsx($spreadsheet);
+        $fileName = 'template_import_tim.xlsx';
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $fileName, ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
     }
 
     public function render()

@@ -598,6 +598,7 @@
                         @php $key = $teamRow['key']; @endphp
                         <div
                             x-data="{
+                                hasWork: @entangle('kabkotFormState.' . $key . '.has_work'),
                                 score: @entangle('kabkotFormState.' . $key . '.score'),
                                 isDirty: @entangle('kabkotFormState.' . $key . '.is_dirty'),
                                 isRated: @entangle('kabkotFormState.' . $key . '.is_rated'),
@@ -617,15 +618,36 @@
                                     :class="isRated ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'"
                                     x-text="isRated ? '✓ Dinilai' : '○ Belum'"></span>
                             </div>
+                            {{-- Ada Pekerjaan? row --}}
+                            <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
+                                <span class="text-[10px] font-black text-slate-500 uppercase tracking-wide">Ada Pekerjaan?</span>
+                                <label class="flex items-center gap-2 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        x-model="hasWork"
+                                        @change="isDirty = true; if(!hasWork) score = '';"
+                                        class="w-4 h-4 rounded border-slate-300 text-minimal-indigo focus:ring-minimal-indigo cursor-pointer"
+                                    >
+                                    <span class="text-[10px] font-black uppercase tracking-wide" :class="hasWork ? 'text-emerald-600' : 'text-slate-400'" x-text="hasWork ? 'Ya' : 'Tidak'"></span>
+                                </label>
+                            </div>
+                            {{-- Nilai + Aksi row --}}
                             <div class="px-4 py-3 flex items-center gap-3">
-                                <span class="text-xs font-black text-slate-500 uppercase tracking-wide flex-shrink-0">Nilai</span>
-                                <input
-                                    x-model="score"
-                                    @input="isDirty = true"
-                                    type="number" min="1" max="100"
-                                    class="w-20 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-center text-sm font-black text-minimal-indigo focus:ring-4 focus:ring-minimal-indigo/10 focus:border-minimal-indigo transition-all shadow-inner"
-                                    placeholder="--"
-                                >
+                                <template x-if="hasWork">
+                                    <span class="text-xs font-black text-slate-500 uppercase tracking-wide flex-shrink-0">Nilai</span>
+                                </template>
+                                <template x-if="hasWork">
+                                    <input
+                                        x-model="score"
+                                        @input="isDirty = true"
+                                        type="number" min="1" max="100"
+                                        class="w-20 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-center text-sm font-black text-minimal-indigo focus:ring-4 focus:ring-minimal-indigo/10 focus:border-minimal-indigo transition-all shadow-inner"
+                                        placeholder="--"
+                                    >
+                                </template>
+                                <template x-if="!hasWork">
+                                    <span class="text-xs font-bold text-slate-300 uppercase tracking-wide flex-shrink-0 italic">Tidak ada pekerjaan</span>
+                                </template>
                                 <button
                                     wire:click="saveKabkotRating('{{ $key }}')"
                                     wire:loading.attr="disabled"
@@ -670,6 +692,7 @@
                             <tr class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
                                 <th class="px-6 py-4 border-b border-slate-100">Kepala Kabkot</th>
                                 <th class="px-5 py-4 border-b border-slate-100">Tim Penilai</th>
+                                <th class="px-4 py-4 border-b border-slate-100 text-center">Ada Pekerjaan?</th>
                                 <th class="px-4 py-4 border-b border-slate-100 text-center">Nilai (1–100)</th>
                                 <th class="px-5 py-4 border-b border-slate-100 text-right">Aksi</th>
                             </tr>
@@ -680,6 +703,7 @@
                                 @php $key = $teamRow['key']; @endphp
                                 <tr
                                     x-data="{
+                                        hasWork: @entangle('kabkotFormState.' . $key . '.has_work'),
                                         score: @entangle('kabkotFormState.' . $key . '.score'),
                                         isDirty: @entangle('kabkotFormState.' . $key . '.is_dirty'),
                                         isRated: @entangle('kabkotFormState.' . $key . '.is_rated'),
@@ -714,14 +738,33 @@
                                         </div>
                                     </td>
 
+                                    {{-- Ada Pekerjaan? checkbox --}}
                                     <td class="px-4 py-4 text-center">
-                                        <input
-                                            x-model="score"
-                                            @input="isDirty = true"
-                                            type="number" min="1" max="100"
-                                            class="w-20 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-center text-sm font-black text-minimal-indigo focus:ring-4 focus:ring-minimal-indigo/10 focus:border-minimal-indigo transition-all shadow-inner"
-                                            placeholder="--"
-                                        >
+                                        <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                x-model="hasWork"
+                                                @change="isDirty = true; if(!hasWork) score = '';"
+                                                class="w-4 h-4 rounded border-slate-300 text-minimal-indigo focus:ring-minimal-indigo cursor-pointer"
+                                            >
+                                            <span class="text-[9px] font-black uppercase tracking-wide hidden xl:inline" :class="hasWork ? 'text-emerald-600' : 'text-slate-400'" x-text="hasWork ? 'Ya' : 'Tidak'"></span>
+                                        </label>
+                                    </td>
+
+                                    {{-- Nilai input (only when has_work) --}}
+                                    <td class="px-4 py-4 text-center">
+                                        <template x-if="hasWork">
+                                            <input
+                                                x-model="score"
+                                                @input="isDirty = true"
+                                                type="number" min="1" max="100"
+                                                class="w-20 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-center text-sm font-black text-minimal-indigo focus:ring-4 focus:ring-minimal-indigo/10 focus:border-minimal-indigo transition-all shadow-inner"
+                                                placeholder="--"
+                                            >
+                                        </template>
+                                        <template x-if="!hasWork">
+                                            <span class="text-slate-300 font-black text-sm">—</span>
+                                        </template>
                                     </td>
 
                                     <td class="px-5 py-4 text-right">
@@ -783,8 +826,8 @@
                     <div class="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mb-6">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     </div>
-                    <h4 class="text-lg font-black text-slate-800 uppercase italic leading-none mb-2">Nilai Tidak Valid</h4>
-                    <p class="text-xs text-slate-500 font-medium mb-8">Masukkan nilai antara 1 sampai 100.</p>
+                    <h4 class="text-lg font-black text-slate-800 uppercase italic leading-none mb-2">Nilai Diperlukan</h4>
+                    <p class="text-xs text-slate-500 font-medium mb-8">Kolom "Ada Pekerjaan?" dicentang — masukkan nilai antara 1 sampai 100, atau hilangkan centang jika tidak ada pekerjaan.</p>
                     <button wire:click="$set('showKabkotValidationDialog', false)" class="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">
                         Saya Mengerti
                     </button>

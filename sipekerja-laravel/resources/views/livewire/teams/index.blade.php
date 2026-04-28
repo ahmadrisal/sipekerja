@@ -5,13 +5,22 @@
             <h2 class="text-2xl font-black text-slate-800 tracking-tight italic">Manajemen Tim Kerja</h2>
             <p class="text-slate-400 text-[11px] font-medium">Kelola struktur tim, tentukan ketua, dan atur penugasan anggota.</p>
         </div>
-        <button 
-            wire:click="openCreateModal"
-            class="bg-minimal-indigo text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 shadow-xl shadow-indigo-500/20 hover:scale-105 transition-all active:scale-95 group"
-        >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 group-hover:rotate-90 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Buat Tim Baru
-        </button>
+        <div class="flex items-center gap-2">
+            <button
+                wire:click="openImportModal"
+                class="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 hover:border-minimal-indigo/40 hover:text-minimal-indigo hover:shadow-sm transition-all active:scale-95"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Import Tim
+            </button>
+            <button
+                wire:click="openCreateModal"
+                class="bg-minimal-indigo text-white px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 shadow-xl shadow-indigo-500/20 hover:scale-105 transition-all active:scale-95 group"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 group-hover:rotate-90 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Buat Tim Baru
+            </button>
+        </div>
     </div>
 
     <!-- Stats & Filters -->
@@ -256,6 +265,161 @@
                     <div class="flex gap-3 pt-4 border-t border-slate-50">
                         <button type="button" wire:click="closeModal" class="flex-1 py-3 bg-slate-50 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95">Batal</button>
                         <button type="button" wire:click="saveTeam" class="flex-[2] py-3 bg-minimal-indigo text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-500/20 hover:scale-[1.02] transition-all active:scale-95">Simpan Tim Kerja</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Import Tim Modal -->
+    @if($isImportModalOpen)
+        <div class="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-10 overflow-y-auto">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="closeImportModal"></div>
+            <div class="bg-white w-full max-w-2xl rounded-[2rem] shadow-2xl relative flex flex-col animate-in zoom-in-95 duration-300 mb-10">
+
+                <!-- Header -->
+                <div class="p-6 pb-4 border-b border-slate-50 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-minimal-indigo/10 text-minimal-indigo flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        </div>
+                        <div>
+                            <h4 class="text-lg font-black text-slate-800 tracking-tight">Import Tim dari Excel</h4>
+                            <p class="text-[9px] font-black uppercase tracking-[0.2em] text-minimal-indigo/60">Bulk Import · Assign Otomatis</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeImportModal" class="w-9 h-9 rounded-xl bg-slate-50 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-5">
+
+                    <!-- Download Template -->
+                    <div class="flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-2xl px-4 py-3">
+                        <div>
+                            <p class="text-[10px] font-black text-minimal-indigo uppercase tracking-widest leading-none mb-0.5">Template Excel</p>
+                            <p class="text-[10px] text-slate-500 font-medium">Unduh template, isi data, lalu upload kembali</p>
+                        </div>
+                        <button wire:click="downloadImportTemplate" class="flex items-center gap-2 bg-minimal-indigo text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Unduh Template
+                        </button>
+                    </div>
+
+                    <!-- Format info -->
+                    <div class="bg-slate-50 rounded-xl px-4 py-3 text-[10px] text-slate-500 font-medium space-y-1">
+                        <p class="font-black text-slate-600 uppercase tracking-widest text-[9px] mb-1">Format Kolom Excel</p>
+                        <p><span class="font-black text-slate-700">Kolom A</span> — Nama Tim (cukup diisi di baris pertama tiap tim)</p>
+                        <p><span class="font-black text-slate-700">Kolom B</span> — NIP Ketua Tim (cukup di baris pertama, harus sudah ada di Data Pegawai)</p>
+                        <p><span class="font-black text-slate-700">Kolom C</span> — NIP Anggota, satu per baris (harus sudah ada di Data Pegawai)</p>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div>
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-1.5">Upload File Excel (.xlsx)</label>
+                        <label class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 hover:border-minimal-indigo/40 rounded-2xl p-8 cursor-pointer transition-colors group">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-300 group-hover:text-minimal-indigo/40 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-minimal-indigo/60 transition-colors">
+                                {{ $importFile ? $importFile->getClientOriginalName() : 'Klik untuk pilih file .xlsx' }}
+                            </span>
+                            <input type="file" wire:model="importFile" accept=".xlsx,.xls" class="hidden">
+                        </label>
+                        @error('importFile') <p class="text-[8px] font-black text-red-500 uppercase tracking-widest mt-1 ml-1">{{ $message }}</p> @enderror
+                        <div wire:loading wire:target="importFile" class="mt-2 text-[9px] text-minimal-indigo font-black uppercase tracking-widest text-center">Memproses file...</div>
+                    </div>
+
+                    <!-- Preview Results -->
+                    @if($importParsed)
+                        <!-- Summary Stat Cards -->
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-3 text-center">
+                                <p class="text-2xl font-black text-emerald-600">{{ count($importTeams) }}</p>
+                                <p class="text-[8px] font-black text-emerald-500 uppercase tracking-widest leading-tight mt-0.5">Tim Siap Import</p>
+                            </div>
+                            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3 text-center">
+                                <p class="text-2xl font-black text-slate-700">{{ collect($importTeams)->sum(fn($t) => count($t['members'])) }}</p>
+                                <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-tight mt-0.5">Total Anggota</p>
+                            </div>
+                            <div class="bg-red-50 border border-red-100 rounded-2xl p-3 text-center">
+                                <p class="text-2xl font-black text-red-500">{{ count($importErrors) }}</p>
+                                <p class="text-[8px] font-black text-red-400 uppercase tracking-widest leading-tight mt-0.5">Tim Gagal</p>
+                            </div>
+                        </div>
+
+                        <!-- Valid Teams Preview -->
+                        @if(count($importTeams) > 0)
+                            <div>
+                                <p class="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                    Tim yang Akan Diimport
+                                </p>
+                                <div class="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                                    @foreach($importTeams as $team)
+                                        <div class="bg-white border border-slate-100 rounded-xl px-4 py-3 flex items-start justify-between gap-3">
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-[11px] font-black text-slate-800 uppercase italic tracking-tight truncate">{{ $team['team_name'] }}</p>
+                                                <p class="text-[9px] font-medium text-slate-400 mt-0.5">
+                                                    Ketua: <span class="font-black text-minimal-indigo">{{ $team['leader_name'] ?? '—' }}</span>
+                                                    @if($team['leader_nip'])
+                                                        <span class="text-slate-300"> · {{ $team['leader_nip'] }}</span>
+                                                    @endif
+                                                </p>
+                                                @if(count($team['skipped_members']) > 0)
+                                                    <p class="text-[8px] text-amber-500 font-black uppercase tracking-widest mt-0.5">
+                                                        ⚠ {{ count($team['skipped_members']) }} anggota dilewati (NIP tidak ditemukan)
+                                                    </p>
+                                                @endif
+                                            </div>
+                                            <div class="shrink-0 text-right">
+                                                <span class="inline-block bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest">
+                                                    {{ count($team['members']) }} Anggota
+                                                </span>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- Invalid Teams / Errors -->
+                        @if(count($importErrors) > 0)
+                            <div>
+                                <p class="text-[9px] font-black text-red-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                    Tim Gagal Diimport
+                                </p>
+                                <div class="space-y-2 max-h-44 overflow-y-auto custom-scrollbar pr-1">
+                                    @foreach($importErrors as $err)
+                                        <div class="bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                                            <p class="text-[10px] font-black text-red-700 uppercase italic tracking-tight">{{ $err['team_name'] ?: '(Nama Tim Kosong)' }}</p>
+                                            <ul class="mt-1 space-y-0.5">
+                                                @foreach($err['reasons'] as $reason)
+                                                    <li class="text-[9px] text-red-500 font-medium">• {{ $reason }}</li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        @if(count($importTeams) === 0 && count($importErrors) === 0)
+                            <div class="text-center py-6">
+                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">File tidak mengandung data yang bisa diproses</p>
+                            </div>
+                        @endif
+                    @endif
+
+                    <!-- Actions -->
+                    <div class="flex gap-3 pt-2 border-t border-slate-50">
+                        <button type="button" wire:click="closeImportModal" class="flex-1 py-3 bg-slate-50 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all active:scale-95">Batal</button>
+                        @if($importParsed && count($importTeams) > 0)
+                            <button type="button" wire:click="confirmImport" class="flex-[2] py-3 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Konfirmasi Import {{ count($importTeams) }} Tim
+                            </button>
+                        @endif
                     </div>
                 </div>
             </div>

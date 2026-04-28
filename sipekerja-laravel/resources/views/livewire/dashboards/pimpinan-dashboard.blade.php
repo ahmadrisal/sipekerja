@@ -1065,9 +1065,13 @@
                                 <p class="text-[10px] font-black text-minimal-indigo uppercase italic tracking-tight">{{ $entry['team_name'] }}</p>
                                 <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">KT: {{ $entry['evaluator_name'] }}</p>
                             </div>
-                            <span class="text-lg font-black italic {{ $entry['score'] >= 80 ? 'text-emerald-600' : ($entry['score'] >= 60 ? 'text-amber-500' : ($entry['score'] > 0 ? 'text-red-500' : 'text-slate-300')) }}">
-                                {{ $entry['score'] ?? '—' }}
-                            </span>
+                            @if($entry['has_work'])
+                                <span class="text-lg font-black italic {{ ($entry['score'] ?? 0) >= 80 ? 'text-emerald-600' : (($entry['score'] ?? 0) >= 60 ? 'text-amber-500' : (($entry['score'] ?? 0) > 0 ? 'text-red-500' : 'text-slate-300')) }}">
+                                    {{ $entry['score'] ?? '—' }}
+                                </span>
+                            @else
+                                <span class="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-slate-100 text-slate-400 rounded-full">Tidak Ada Pekerjaan</span>
+                            @endif
                         </div>
                         @endforeach
                         @endif
@@ -1224,9 +1228,13 @@
                                                             <p class="text-[10px] font-bold text-slate-600">{{ $entry['evaluator_name'] }}</p>
                                                         </td>
                                                         <td class="px-4 py-3 text-center">
-                                                            <span class="text-lg font-black italic {{ $entry['score'] >= 80 ? 'text-emerald-600' : ($entry['score'] >= 60 ? 'text-amber-500' : ($entry['score'] > 0 ? 'text-red-500' : 'text-slate-300')) }}">
-                                                                {{ $entry['score'] ?? '—' }}
-                                                            </span>
+                                                            @if($entry['has_work'])
+                                                                <span class="text-lg font-black italic {{ ($entry['score'] ?? 0) >= 80 ? 'text-emerald-600' : (($entry['score'] ?? 0) >= 60 ? 'text-amber-500' : (($entry['score'] ?? 0) > 0 ? 'text-red-500' : 'text-slate-300')) }}">
+                                                                    {{ $entry['score'] ?? '—' }}
+                                                                </span>
+                                                            @else
+                                                                <span class="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 bg-slate-100 text-slate-400 rounded-full">Tidak Ada Pekerjaan</span>
+                                                            @endif
                                                         </td>
                                                     </tr>
                                                     @endforeach

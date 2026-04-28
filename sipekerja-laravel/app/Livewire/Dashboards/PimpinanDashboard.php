@@ -415,7 +415,8 @@ class PimpinanDashboard extends Component
             $this->kabkotOverrideFormState[$r->id] = [
                 'team_name'      => $r->team->team_name ?? '-',
                 'evaluator_name' => $r->evaluator->name ?? '-',
-                'score'          => $r->score,
+                'score'          => $r->score > 0 ? $r->score : '',
+                'has_work'       => $r->score > 0,
                 'overridden'     => (bool) $r->overridden_by,
                 'flag_hidden'    => (bool) $r->override_flag_hidden,
                 'is_dirty'       => false,
@@ -665,7 +666,7 @@ class PimpinanDashboard extends Component
                 'avg_score'      => count($scores) ? round(array_sum($scores) / count($scores), 2) : null,
                 'q3_score'       => count($scores) ? $this->calcQ3($scores) : null,
                 'max_score'      => count($scores) ? round(max($scores), 2) : null,
-                'rated_count'    => $ratings->count(),
+                'rated_count'    => count($scores),
                 'has_override'   => $overridden > 0,
                 'pimpinan_score' => $pimpinanRec ? (float) $pimpinanRec->score : null,
             ];

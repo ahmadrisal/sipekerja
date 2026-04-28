@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sipekerja-v1';
+const CACHE_NAME = 'pakar-v1';
 
 // CDN assets to cache on install
 const CDN_ASSETS = [

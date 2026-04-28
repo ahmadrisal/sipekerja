@@ -274,6 +274,67 @@ class DashboardService
     }
 
     /**
+     * Chart data for Admin Dashboard
+     */
+    public function getAdminChartData(): array
+    {
+        $users = User::with('teams')->get();
+        $teams = Team::with(['members', 'leader'])->get();
+
+        // 1. Histogram: distribusi jumlah tim per pegawai
+        $teamCountPerEmployee = $users->map(fn($u) => $u->teams->count());
+        $maxCount = max((int) $teamCountPerEmployee->max(), 4);
+        $histLabels = range(0, $maxCount);
+        $histData   = array_map(
+            fn($n) => $teamCountPerEmployee->filter(fn($c) => $c === $n)->count(),
+            $histLabels
+        );
+        $histColors = array_map(
+            fn($n) => $n === 0 ? '#f43f5e' : '#6366f1',
+            $histLabels
+        );
+
+        // 2. Distribusi ukuran tim
+        $avgMembers  = $teams->count() > 0 ? round($teams->avg(fn($t) => $t->members->count()), 1) : 0;
+        $teamSizeRows = $teams->sortByDesc(fn($t) => $t->members->count())->values()->map(fn($t) => [
+            'name'    => $t->team_name,
+            'count'   => $t->members->count(),
+            'leader'  => $t->leader?->name ?? '-',
+            'members' => $t->members->pluck('name')->toArray(),
+        ])->toArray();
+
+        // 3. Status plot pegawai (donut)
+        $plotted   = $users->filter(fn($u) => $u->teams->count() > 0)->count();
+        $unplotted = $users->count() - $plotted;
+
+        // 4. Top 10 pegawai beban tim terbanyak
+        $topEmployees = $users->sortByDesc(fn($u) => $u->teams->count())
+            ->take(10)->values()->map(fn($u) => [
+                'name'  => $u->name,
+                'nip'   => $u->nip,
+                'count' => $u->teams->count(),
+                'teams' => $u->teams->pluck('team_name')->toArray(),
+            ])->toArray();
+
+        return [
+            'histogram' => [
+                'labels' => array_map(fn($n) => $n === 0 ? 'Belum Terplot' : "{$n} Tim", $histLabels),
+                'data'   => array_values($histData),
+                'colors' => $histColors,
+            ],
+            'teamSize' => [
+                'rows' => $teamSizeRows,
+                'avg'  => $avgMembers,
+            ],
+            'plotStatus' => [
+                'plotted'   => $plotted,
+                'unplotted' => $unplotted,
+            ],
+            'topEmployees' => $topEmployees,
+        ];
+    }
+
+    /**
      * Get Statistics for Pegawai
      */
     public function getPegawaiDashboard($userId, $month, $year)

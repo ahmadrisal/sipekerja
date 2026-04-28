@@ -220,14 +220,17 @@ class KetuaTimDashboard extends Component
                 $key    = "{$kabkot->id}_{$team->id}";
                 $rating = $existing->where('kabkot_id', $kabkot->id)->where('team_id', $team->id)->first();
 
+                $hasWork = $rating ? ($rating->score > 0) : true;
+
                 $this->kabkotFormState[$key] = [
                     'kabkot_id'   => $kabkot->id,
                     'kabkot_name' => $kabkot->name,
                     'kabkot_nip'  => $kabkot->nip,
                     'team_id'     => $team->id,
                     'team_name'   => $team->team_name,
-                    'score'       => $rating ? $rating->score : '',
-                    'notes'       => $rating ? ($rating->notes ?? '') : '',
+                    'has_work'    => $hasWork,
+                    'score'       => ($rating && $rating->score > 0) ? $rating->score : '',
+                    'notes'       => ($rating && $rating->notes !== 'TIDAK_ADA_PEKERJAAN') ? ($rating->notes ?? '') : '',
                     'is_dirty'    => false,
                     'is_rated'    => $rating ? true : false,
                     'overridden'  => $rating && $rating->overridden_by && !$rating->override_flag_hidden,
@@ -240,15 +243,22 @@ class KetuaTimDashboard extends Component
     {
         $entry = $this->kabkotFormState[$key];
 
-        if (!$entry['score'] || $entry['score'] < 1 || $entry['score'] > 100) {
-            $this->showKabkotValidationDialog = true;
-            return;
+        if ($entry['has_work']) {
+            if (!$entry['score'] || $entry['score'] < 1 || $entry['score'] > 100) {
+                $this->showKabkotValidationDialog = true;
+                return;
+            }
+            $score = $entry['score'];
+            $notes = $entry['notes'] ?: null;
+        } else {
+            $score = 0;
+            $notes = 'TIDAK_ADA_PEKERJAAN';
         }
 
         KabkotRating::updateOrCreate(
             ['evaluator_id' => Auth::id(), 'kabkot_id' => $entry['kabkot_id'],
              'team_id' => $entry['team_id'], 'period_month' => $this->month, 'period_year' => $this->year],
-            ['score' => $entry['score'], 'notes' => $entry['notes'] ?: null]
+            ['score' => $score, 'notes' => $notes]
         );
 
         $this->kabkotFormState[$key]['is_dirty'] = false;
@@ -277,6 +287,7 @@ class KetuaTimDashboard extends Component
 
         $this->kabkotFormState[$key]['score']    = '';
         $this->kabkotFormState[$key]['notes']    = '';
+        $this->kabkotFormState[$key]['has_work'] = true;
         $this->kabkotFormState[$key]['is_dirty'] = false;
         $this->kabkotFormState[$key]['is_rated'] = false;
 

@@ -3,7 +3,7 @@
         <div class="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center border border-white/10 backdrop-blur-sm">
             <span class="text-sm font-black text-white italic">S</span>
         </div>
-        <span class="text-sm font-black uppercase italic tracking-widest text-white/90">SIPEKERJA</span>
+        <span class="text-sm font-black uppercase italic tracking-widest text-white/90">PAKAR</span>
     </div>
 
     <nav class="flex-1 px-3 space-y-1 overflow-y-auto">

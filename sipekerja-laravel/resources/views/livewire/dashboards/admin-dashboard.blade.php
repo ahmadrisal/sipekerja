@@ -145,6 +145,314 @@
         </div>
     </div>
 
+    <!-- ══ CHARTS SECTION ════════════════════════════════════════════ -->
+
+    <!-- Row 1: Donut + Histogram -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Chart 3: Status Plot Pegawai (Donut) -->
+        <div class="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 flex flex-col">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h3 class="text-sm font-black text-slate-800 tracking-tight">Status Plot</h3>
+                    <p class="text-[9px] font-black uppercase tracking-widest text-violet-600/60">Terplot vs Belum</p>
+                </div>
+                <button
+                    wire:click="exportStatusPlot"
+                    class="flex items-center gap-1.5 bg-slate-50 border border-slate-100 text-slate-500 hover:border-violet-200 hover:text-violet-600 hover:bg-violet-50 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 shrink-0"
+                    title="Export Excel"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export
+                </button>
+            </div>
+            <div id="donutPlotChart" class="flex-1 min-h-[220px]" wire:ignore></div>
+        </div>
+
+        <!-- Chart 1: Histogram Distribusi Tim per Pegawai -->
+        <div class="lg:col-span-2 bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 flex flex-col">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <h3 class="text-sm font-black text-slate-800 tracking-tight">Distribusi Tim per Pegawai</h3>
+                    <p class="text-[9px] font-black uppercase tracking-widest text-minimal-indigo/60">Ketimpangan Penempatan SDM</p>
+                </div>
+                <button
+                    wire:click="exportDistribusiTimPegawai"
+                    class="flex items-center gap-1.5 bg-slate-50 border border-slate-100 text-slate-500 hover:border-indigo-200 hover:text-minimal-indigo hover:bg-indigo-50 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 shrink-0"
+                    title="Export Excel"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export
+                </button>
+            </div>
+            <div id="histogramChart" class="flex-1 min-h-[220px]" wire:ignore></div>
+        </div>
+    </div>
+
+    <!-- Row 2: Distribusi Ukuran Tim (full width) -->
+    <div class="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
+        <div class="flex items-start justify-between mb-4">
+            <div>
+                <h3 class="text-sm font-black text-slate-800 tracking-tight">Distribusi Ukuran Tim</h3>
+                <p class="text-[9px] font-black uppercase tracking-widest text-emerald-600/60">Jumlah Anggota per Tim · Garis = Rata-rata</p>
+            </div>
+            <button
+                wire:click="exportDistribusiUkuranTim"
+                class="flex items-center gap-1.5 bg-slate-50 border border-slate-100 text-slate-500 hover:border-emerald-200 hover:text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 shrink-0"
+                title="Export Excel"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export
+            </button>
+        </div>
+        @php $teamSizeHeight = max(280, count($chartData['teamSize']['rows']) * 36 + 60); @endphp
+        <div id="teamSizeChart" style="min-height: {{ $teamSizeHeight }}px" wire:ignore></div>
+    </div>
+
+    <!-- Row 3: Top 10 Beban Tim (full width) -->
+    <div class="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
+        <div class="flex items-start justify-between mb-4">
+            <div>
+                <h3 class="text-sm font-black text-slate-800 tracking-tight">Top Pegawai — Beban Tim Terbanyak</h3>
+                <p class="text-[9px] font-black uppercase tracking-widest text-amber-600/60">Deteksi Pegawai Overloaded · Max 10</p>
+            </div>
+            <button
+                wire:click="exportTopBebanTim"
+                class="flex items-center gap-1.5 bg-slate-50 border border-slate-100 text-slate-500 hover:border-amber-200 hover:text-amber-600 hover:bg-amber-50 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all active:scale-95 shrink-0"
+                title="Export Excel"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export
+            </button>
+        </div>
+        <div id="topEmployeesChart" class="min-h-[320px]" wire:ignore></div>
+    </div>
+
+    @script
+    <script>
+        const adminChartData = @json($chartData);
+        const fontFamily = 'Outfit, sans-serif';
+        const toolbar = { show: false };
+
+        // ── Chart 3: Donut Status Plot ─────────────────────────────
+        (function() {
+            const el = document.querySelector('#donutPlotChart');
+            if (!el) return;
+            const { plotted, unplotted } = adminChartData.plotStatus;
+            new ApexCharts(el, {
+                chart: { type: 'donut', height: 260, fontFamily, toolbar },
+                series: [plotted, unplotted],
+                labels: ['Sudah Terplot', 'Belum Terplot'],
+                colors: ['#6366f1', '#f43f5e'],
+                legend: {
+                    position: 'bottom',
+                    fontFamily,
+                    fontWeight: 900,
+                    fontSize: '9px',
+                    labels: { colors: ['#475569'] }
+                },
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            size: '65%',
+                            labels: {
+                                show: true,
+                                total: {
+                                    show: true,
+                                    label: 'TOTAL SDM',
+                                    fontSize: '9px',
+                                    fontWeight: 900,
+                                    fontFamily,
+                                    color: '#94a3b8',
+                                    formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+                                },
+                                value: { fontSize: '22px', fontWeight: 900, fontFamily, color: '#1e293b' }
+                            }
+                        }
+                    }
+                },
+                dataLabels: { enabled: false },
+                tooltip: {
+                    style: { fontFamily },
+                    y: { formatter: (v) => `${v} pegawai` }
+                }
+            }).render();
+        })();
+
+        // ── Chart 1: Histogram Distribusi Tim per Pegawai ──────────
+        (function() {
+            const el = document.querySelector('#histogramChart');
+            if (!el) return;
+            const { labels, data, colors } = adminChartData.histogram;
+            new ApexCharts(el, {
+                chart: { type: 'bar', height: 260, fontFamily, toolbar, animations: { enabled: true, easing: 'easeinout', speed: 600 } },
+                series: [{ name: 'Jumlah Pegawai', data }],
+                xaxis: {
+                    categories: labels,
+                    labels: { style: { fontSize: '9px', fontWeight: 900, colors: '#64748b' } },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
+                },
+                yaxis: {
+                    title: { text: 'JUMLAH PEGAWAI', style: { fontSize: '8px', color: '#94a3b8', fontWeight: 900 } },
+                    labels: { style: { fontSize: '9px', fontWeight: 800, colors: '#64748b' } }
+                },
+                colors: colors,
+                plotOptions: {
+                    bar: {
+                        distributed: true,
+                        borderRadius: 6,
+                        columnWidth: '55%',
+                        dataLabels: { position: 'top' }
+                    }
+                },
+                dataLabels: {
+                    enabled: true,
+                    offsetY: -18,
+                    style: { fontSize: '10px', fontWeight: 900, colors: ['#1e293b'] },
+                    formatter: (v) => v > 0 ? v : ''
+                },
+                legend: { show: false },
+                grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
+                tooltip: {
+                    style: { fontFamily },
+                    y: { formatter: (v) => `${v} pegawai` }
+                }
+            }).render();
+        })();
+
+        // ── Chart 2: Distribusi Ukuran Tim (Horizontal Bar) ────────
+        (function() {
+            const el = document.querySelector('#teamSizeChart');
+            if (!el) return;
+            const { rows, avg } = adminChartData.teamSize;
+            if (!rows.length) { el.innerHTML = '<p class="text-center text-[10px] text-slate-300 font-black uppercase py-10">Belum ada tim terdaftar</p>'; return; }
+
+            const teamNames = rows.map(r => r.name);
+            const counts    = rows.map(r => r.count);
+            const barColors = rows.map(r => {
+                if (r.count === 0) return '#f43f5e';
+                if (r.count > avg * 1.5) return '#f59e0b';
+                return '#10b981';
+            });
+
+            new ApexCharts(el, {
+                chart: { type: 'bar', fontFamily, toolbar, animations: { enabled: true, easing: 'easeinout', speed: 600 } },
+                series: [{ name: 'Jumlah Anggota', data: counts }],
+                xaxis: {
+                    categories: teamNames,
+                    labels: { style: { fontSize: '9px', fontWeight: 800, colors: '#475569' }, trim: true, maxHeight: 90 }
+                },
+                yaxis: {
+                    title: { text: 'JUMLAH ANGGOTA', style: { fontSize: '8px', color: '#94a3b8', fontWeight: 900 } },
+                    labels: { style: { fontSize: '9px', fontWeight: 800, colors: '#64748b' } }
+                },
+                colors: barColors,
+                plotOptions: {
+                    bar: {
+                        distributed: true,
+                        borderRadius: 5,
+                        columnWidth: '60%',
+                        dataLabels: { position: 'top' }
+                    }
+                },
+                dataLabels: {
+                    enabled: true,
+                    offsetY: -18,
+                    style: { fontSize: '9px', fontWeight: 900, colors: ['#1e293b'] }
+                },
+                annotations: {
+                    yaxis: [{
+                        y: avg,
+                        borderColor: '#6366f1',
+                        strokeDashArray: 5,
+                        borderWidth: 2,
+                        label: {
+                            text: `AVG ${avg}`,
+                            position: 'left',
+                            style: { color: '#6366f1', background: '#eef2ff', fontSize: '8px', fontWeight: 900, fontFamily, padding: { top: 3, bottom: 3, left: 6, right: 6 } }
+                        }
+                    }]
+                },
+                legend: { show: false },
+                grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
+                tooltip: {
+                    style: { fontFamily },
+                    custom: ({ dataPointIndex }) => {
+                        const r = rows[dataPointIndex];
+                        return `<div style="padding:10px 14px;font-family:Outfit,sans-serif;background:#0f172a;border-radius:10px;color:#fff">
+                            <p style="font-size:10px;font-weight:900;text-transform:uppercase;color:#818cf8;margin-bottom:4px">${r.name}</p>
+                            <p style="font-size:9px;color:#cbd5e1">Ketua: <b style="color:#fff">${r.leader}</b></p>
+                            <p style="font-size:9px;color:#cbd5e1">${r.count} anggota</p>
+                        </div>`;
+                    }
+                }
+            }).render();
+        })();
+
+        // ── Chart 4: Top 10 Pegawai Beban Tim (Horizontal Bar) ─────
+        (function() {
+            const el = document.querySelector('#topEmployeesChart');
+            if (!el) return;
+            const top = adminChartData.topEmployees;
+            if (!top.length) { el.innerHTML = '<p class="text-center text-[10px] text-slate-300 font-black uppercase py-10">Belum ada data</p>'; return; }
+
+            const names  = top.map(e => e.name.split(' ').slice(0, 2).join(' '));
+            const counts = top.map(e => e.count);
+            const barColors = top.map((e, i) => {
+                if (i === 0) return '#f59e0b';
+                if (i === 1) return '#94a3b8';
+                if (i === 2) return '#d97706';
+                return '#6366f1';
+            });
+
+            new ApexCharts(el, {
+                chart: { type: 'bar', height: Math.max(320, top.length * 42 + 60), fontFamily, toolbar, animations: { enabled: true, easing: 'easeinout', speed: 600 } },
+                series: [{ name: 'Jumlah Tim', data: counts }],
+                xaxis: {
+                    categories: names,
+                    labels: { style: { fontSize: '9px', fontWeight: 800, colors: '#475569' } },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
+                },
+                yaxis: {
+                    title: { text: 'JUMLAH TIM', style: { fontSize: '8px', color: '#94a3b8', fontWeight: 900 } },
+                    labels: { style: { fontSize: '9px', fontWeight: 800, colors: '#64748b' } },
+                    tickAmount: Math.max(...counts)
+                },
+                colors: barColors,
+                plotOptions: {
+                    bar: {
+                        distributed: true,
+                        borderRadius: 6,
+                        columnWidth: '50%',
+                        dataLabels: { position: 'top' }
+                    }
+                },
+                dataLabels: {
+                    enabled: true,
+                    offsetY: -18,
+                    style: { fontSize: '10px', fontWeight: 900, colors: ['#1e293b'] },
+                    formatter: (v) => `${v} tim`
+                },
+                legend: { show: false },
+                grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
+                tooltip: {
+                    style: { fontFamily },
+                    custom: ({ dataPointIndex }) => {
+                        const e = top[dataPointIndex];
+                        return `<div style="padding:10px 14px;font-family:Outfit,sans-serif;background:#0f172a;border-radius:10px;color:#fff;max-width:220px">
+                            <p style="font-size:10px;font-weight:900;text-transform:uppercase;color:#fbbf24;margin-bottom:4px">${e.name}</p>
+                            <p style="font-size:8px;color:#64748b;margin-bottom:4px">${e.nip}</p>
+                            <p style="font-size:9px;color:#cbd5e1">${e.count} Tim: ${e.teams.join(', ')}</p>
+                        </div>`;
+                    }
+                }
+            }).render();
+        })();
+    </script>
+    @endscript
+
     <!-- Management Dialogs -->
     @if($adminDialogType)
     <div class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300 pointer-events-auto">
