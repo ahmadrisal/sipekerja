@@ -42,6 +42,6 @@ class Login extends Component
 
     public function render()
     {
-        return view('livewire.auth.login')->layout('layouts.app')->title('Login SIPEKERJA');
+        return view('livewire.auth.login')->layout('layouts.app')->title('Login ' . config('app.name'));
     }
 }
