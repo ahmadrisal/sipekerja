@@ -51,10 +51,10 @@
 <body class="font-sans antialiased bg-[#f8fafc] text-slate-900">
     <div class="min-h-screen flex">
         @auth
-            @if(!in_array(session('active_role'), ['Ketua Tim', 'Pimpinan', 'Pegawai']))
+            @if(!in_array(session('active_role'), ['Ketua Tim', 'Pimpinan', 'Pegawai', 'Super Admin']))
                 <livewire:layout.sidebar />
             @endif
-            <div class="flex-1 flex flex-col min-h-screen {{ !in_array(session('active_role'), ['Ketua Tim', 'Pimpinan', 'Pegawai']) ? 'lg:pl-64' : '' }} w-full">
+            <div class="flex-1 flex flex-col min-h-screen {{ !in_array(session('active_role'), ['Ketua Tim', 'Pimpinan', 'Pegawai', 'Super Admin']) ? 'lg:pl-64' : '' }} w-full">
                 <livewire:layout.navbar />
                 <main class="p-6 lg:p-10 flex-1 w-full max-w-none">
                     {{ $slot }}

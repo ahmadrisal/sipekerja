@@ -12,7 +12,12 @@ class Team extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['team_name', 'leader_id'];
+    protected $fillable = ['team_name', 'leader_id', 'satker_id'];
+
+    public function satker(): BelongsTo
+    {
+        return $this->belongsTo(Satker::class);
+    }
 
     public function leader(): BelongsTo
     {

@@ -68,7 +68,7 @@ class AdminDashboard extends Component
     public function exportDistribusiTimPegawai(DashboardService $service)
     {
         $chart = $service->getAdminChartData();
-        $users = \App\Models\User::with('teams')->orderBy('name')->get();
+        $users = \App\Models\User::where('satker_id', activeSatkerId())->with('teams')->orderBy('name')->get();
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet()->setTitle('Distribusi Tim per Pegawai');
@@ -102,7 +102,7 @@ class AdminDashboard extends Component
 
     public function exportDistribusiUkuranTim(DashboardService $service)
     {
-        $teams = \App\Models\Team::with(['members', 'leader'])->orderByDesc(
+        $teams = \App\Models\Team::where('satker_id', activeSatkerId())->with(['members', 'leader'])->orderByDesc(
             \App\Models\Team::selectRaw('count(*)')
                 ->from('team_members')
                 ->whereColumn('team_id', 'teams.id')
@@ -133,7 +133,7 @@ class AdminDashboard extends Component
 
     public function exportStatusPlot(DashboardService $service)
     {
-        $users = \App\Models\User::with('teams')->orderBy('name')->get();
+        $users = \App\Models\User::where('satker_id', activeSatkerId())->with('teams')->orderBy('name')->get();
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet()->setTitle('Status Plot Pegawai');
@@ -168,7 +168,7 @@ class AdminDashboard extends Component
 
     public function exportTopBebanTim(DashboardService $service)
     {
-        $users = \App\Models\User::with('teams')->get()
+        $users = \App\Models\User::where('satker_id', activeSatkerId())->with('teams')->get()
             ->sortByDesc(fn($u) => $u->teams->count())
             ->take(10)->values();
 

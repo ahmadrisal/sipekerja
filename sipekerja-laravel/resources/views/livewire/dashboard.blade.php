@@ -1,9 +1,11 @@
 <div>
-    @if($role === 'Pimpinan')
+    @if($role === 'Super Admin')
+        <livewire:super-admin.dashboard />
+    @elseif($role === 'Pimpinan')
         <livewire:dashboards.pimpinan-dashboard />
     @elseif($role === 'Ketua Tim')
         <livewire:dashboards.ketua-tim-dashboard />
-    @elseif($role === 'Admin' || $role === 'Super Admin')
+    @elseif($role === 'Admin')
         <livewire:dashboards.admin-dashboard />
     @elseif($role === 'Pegawai')
         <livewire:dashboards.pegawai-dashboard />

@@ -56,7 +56,7 @@ class Index extends Component
 
     public function mount()
     {
-        $this->allUsers = User::orderBy('name')->get(['id', 'name', 'nip'])->toArray();
+        $this->allUsers = User::where('satker_id', activeSatkerId())->orderBy('name')->get(['id', 'name', 'nip'])->toArray();
     }
 
     public function updatedSearch() { $this->resetPage(); }
@@ -178,6 +178,7 @@ class Index extends Component
                 [
                     'team_name' => $this->teamName,
                     'leader_id' => $this->leaderId ?: null,
+                    'satker_id' => activeSatkerId(),
                 ]
             );
 
@@ -281,9 +282,9 @@ class Index extends Component
         $rows        = $sheet->toArray(null, true, true, true);
 
         // Preload all users keyed by NIP for O(1) lookup
-        $allUsers       = User::get(['id', 'name', 'nip']);
+        $allUsers       = User::where('satker_id', activeSatkerId())->get(['id', 'name', 'nip']);
         $usersByNip     = $allUsers->keyBy(fn($u) => trim((string) $u->nip));
-        $existingNames  = Team::pluck('team_name')->map(fn($n) => strtolower(trim($n)))->toArray();
+        $existingNames  = Team::where('satker_id', activeSatkerId())->pluck('team_name')->map(fn($n) => strtolower(trim($n)))->toArray();
 
         // --- Pass 1: group rows by team name ---
         $rawGroups  = [];  // ['team_name' => ['leader_nip' => ..., 'member_nips' => [...]]]
@@ -411,6 +412,7 @@ class Index extends Component
                 $team = Team::create([
                     'team_name' => $entry['team_name'],
                     'leader_id' => $entry['leader_id'],
+                    'satker_id' => activeSatkerId(),
                 ]);
 
                 $team->members()->sync($entry['member_ids']);
@@ -492,7 +494,7 @@ class Index extends Component
 
     public function render()
     {
-        $query = Team::with(['leader', 'members'])
+        $query = Team::where('satker_id', activeSatkerId())->with(['leader', 'members'])
             ->when($this->search, function ($q) {
                 $s = '%' . $this->search . '%';
                 $q->where('team_name', 'like', $s)

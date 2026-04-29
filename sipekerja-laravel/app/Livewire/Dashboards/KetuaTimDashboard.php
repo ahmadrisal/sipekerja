@@ -77,9 +77,10 @@ class KetuaTimDashboard extends Component
     public function loadData()
     {
         $user  = Auth::user();
-        $teams = Team::where('leader_id', $user->id)->with('members')->get();
+        $teams = Team::where('leader_id', $user->id)->where('satker_id', activeSatkerId())->with('members')->get();
 
         $existingRatings = Rating::where('evaluator_id', $user->id)
+            ->where('satker_id', activeSatkerId())
             ->where('period_month', $this->month)
             ->where('period_year', $this->year)
             ->get();
@@ -150,8 +151,8 @@ class KetuaTimDashboard extends Component
         Rating::updateOrCreate(
             ['evaluator_id' => Auth::id(), 'target_user_id' => $entry['member_id'],
              'team_id' => $entry['team_id'], 'period_month' => $this->month, 'period_year' => $this->year],
-            ['score' => $score, 'volume_work' => $volumeWork, 'quality_work' => $qualityWork,
-             'notes' => $notes, 'final_score' => $finalScore, 'overridden_by' => null]
+            ['satker_id' => activeSatkerId(), 'score' => $score, 'volume_work' => $volumeWork,
+             'quality_work' => $qualityWork, 'notes' => $notes, 'final_score' => $finalScore, 'overridden_by' => null]
         );
 
         $this->formState[$key]['is_dirty']   = false;

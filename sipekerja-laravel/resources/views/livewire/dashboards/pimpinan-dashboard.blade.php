@@ -12,9 +12,11 @@
             <button wire:click="setActiveTab('input-kt')" class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all {{ $activeTab === 'input-kt' ? 'bg-minimal-indigo text-white shadow-md' : 'text-slate-400 hover:bg-slate-50' }}">
                 Nilai Ketua Tim
             </button>
+            @if(isProvinsi())
             <button wire:click="setActiveTab('rekap-kabkot')" class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all {{ $activeTab === 'rekap-kabkot' ? 'bg-minimal-indigo text-white shadow-md' : 'text-slate-400 hover:bg-slate-50' }}">
                 Nilai Kepala Kabkot
             </button>
+            @endif
             <button wire:click="setActiveTab('report')" class="px-5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all {{ $activeTab === 'report' ? 'bg-minimal-indigo text-white shadow-md' : 'text-slate-400 hover:bg-slate-50' }}">
                 Report
             </button>
@@ -898,8 +900,8 @@
             </div>
         </div>
 
-    @elseif($activeTab === 'rekap-kabkot')
-        {{-- ===== NILAI KEPALA KABKOT ===== --}}
+    @elseif($activeTab === 'rekap-kabkot' && isProvinsi())
+        {{-- ===== NILAI KEPALA KABKOT (Provinsi only) ===== --}}
         <div class="space-y-6 animate-in fade-in duration-500">
 
             {{-- Flash success --}}

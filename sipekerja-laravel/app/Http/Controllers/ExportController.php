@@ -31,7 +31,10 @@ class ExportController extends Controller
 
         $rekap = $service->getPimpinanRekap($month, $year);
 
+        $satkerId = activeSatkerId();
+
         $pegawaiOnlyIds = User::role('Pegawai')
+            ->where('satker_id', $satkerId)
             ->whereDoesntHave('roles', function ($q) {
                 $q->whereIn('name', ['Ketua Tim', 'Kepala Kabkot', 'Pimpinan', 'Admin']);
             })
@@ -80,7 +83,7 @@ class ExportController extends Controller
         $month = (int) $request->query('month', date('n'));
         $year  = (int) $request->query('year',  date('Y'));
 
-        $ketuaTimUsers = User::role('Ketua Tim')->with('ledTeams')->orderBy('name')->get();
+        $ketuaTimUsers = User::role('Ketua Tim')->where('satker_id', activeSatkerId())->with('ledTeams')->orderBy('name')->get();
 
         $pimpinanRatings = Rating::where('evaluator_id', Auth::id())
             ->whereIn('target_user_id', $ketuaTimUsers->pluck('id'))

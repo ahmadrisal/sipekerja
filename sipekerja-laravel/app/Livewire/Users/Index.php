@@ -60,7 +60,7 @@ class Index extends Component
     public function mount()
     {
         $this->allRoles = Role::all();
-        $this->uniqueTeams = \App\Models\Team::orderBy('team_name')->pluck('team_name')->toArray();
+        $this->uniqueTeams = \App\Models\Team::where('satker_id', activeSatkerId())->orderBy('team_name')->pluck('team_name')->toArray();
     }
 
     public function updatedSearch() { $this->resetPage(); $this->selectedIds = []; $this->selectAll = false; }
@@ -340,6 +340,7 @@ class Index extends Component
                 'name' => $entry['name'],
                 'email' => $entry['email'],
                 'password' => Hash::make($entry['password']),
+                'satker_id' => activeSatkerId(),
             ]);
             if (!empty($entry['roles'])) {
                 $user->syncRoles($entry['roles']);
@@ -475,7 +476,7 @@ class Index extends Component
 
     private function getUsersQuery()
     {
-        $query = User::query()
+        $query = User::where('satker_id', activeSatkerId())
             ->when($this->search, function ($q) {
                 $s = '%' . $this->search . '%';
                 $q->where(function($qq) use ($s) {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Satker;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,9 +31,22 @@ class EnsureRoleContext
                 $request->session()->put('active_role', $roles->first());
             }
 
+            // Inject satker context from user's satker_id
+            if (!$request->session()->has('active_satker_id') || !$request->session()->has('active_satker_type')) {
+                $satker = $user->satker;
+                if ($satker) {
+                    $request->session()->put('active_satker_id',   $satker->id);
+                    $request->session()->put('active_satker_type', $satker->type);
+                } else {
+                    // Fallback: find provinsi satker
+                    $provinsi = Satker::where('type', 'provinsi')->first();
+                    $request->session()->put('active_satker_id',   $provinsi?->id);
+                    $request->session()->put('active_satker_type', 'provinsi');
+                }
+            }
+
             // Optional: If a specific role is required by middleware parameter
             if ($role && $request->session()->get('active_role') !== $role) {
-                // You might want to redirect to a "switcher" or just deny
                 abort(403, 'Anda tidak memiliki akses dengan role ini.');
             }
         }

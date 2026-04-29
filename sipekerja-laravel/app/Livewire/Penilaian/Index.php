@@ -37,10 +37,11 @@ class Index extends Component
         $user = Auth::user();
         
         // Fetch teams led by this user with their members
-        $teams = Team::where('leader_id', $user->id)->with('members')->get();
-        
+        $teams = Team::where('leader_id', $user->id)->where('satker_id', activeSatkerId())->with('members')->get();
+
         // Fetch existing ratings for this period
         $existingRatings = Rating::where('evaluator_id', $user->id)
+            ->where('satker_id', activeSatkerId())
             ->where('period_month', $this->month)
             ->where('period_year', $this->year)
             ->get();
@@ -108,11 +109,12 @@ class Index extends Component
                 'period_year' => $this->year,
             ],
             [
-                'score' => $entry['score'],
-                'volume_work' => $entry['volume_work'],
+                'satker_id'    => activeSatkerId(),
+                'score'        => $entry['score'],
+                'volume_work'  => $entry['volume_work'],
                 'quality_work' => $entry['quality_work'],
-                'notes' => $entry['notes'],
-                'final_score' => $finalScore,
+                'notes'        => $entry['notes'],
+                'final_score'  => $finalScore,
             ]
         );
 
@@ -150,8 +152,8 @@ class Index extends Component
     public function render()
     {
         $user = Auth::user();
-        $teams = Team::where('leader_id', $user->id)->with('members')->get();
-        
+        $teams = Team::where('leader_id', $user->id)->where('satker_id', activeSatkerId())->with('members')->get();
+
         $membersData = [];
         foreach ($teams as $team) {
             foreach ($team->members as $member) {

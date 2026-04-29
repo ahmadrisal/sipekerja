@@ -7,7 +7,14 @@
         @endif
         <div class="hidden md:block">
             <h1 class="text-sm font-black uppercase tracking-[0.2em] text-white/90">{{ $title ?? 'Dashboard' }}</h1>
-            <p class="text-[9px] font-medium text-white/50 uppercase tracking-widest">Penilaian Kinerja Aparatur</p>
+            <p class="text-[9px] font-medium text-white/50 uppercase tracking-widest">
+                Penilaian Kinerja Aparatur
+                @auth
+                    @if(Auth::user()->satker)
+                        · <span class="text-amber-400/80">{{ Auth::user()->satker->name }}</span>
+                    @endif
+                @endauth
+            </p>
         </div>
     </div>
 

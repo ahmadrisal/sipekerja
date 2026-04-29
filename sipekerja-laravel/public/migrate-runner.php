@@ -114,7 +114,7 @@ out("");
 // ── 2. Roles ─────────────────────────────────────────────────────────
 out("--- [2/4] Sinkronisasi Roles ---");
 try {
-    $requiredRoles = ['Admin', 'Pimpinan', 'Kepala Kabkot', 'Ketua Tim', 'Pegawai'];
+    $requiredRoles = ['Super Admin', 'Admin', 'Pimpinan', 'Kepala Kabkot', 'Ketua Tim', 'Pegawai'];
     foreach ($requiredRoles as $roleName) {
         $role    = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
         $created = $role->wasRecentlyCreated ? ' <- BARU dibuat' : ' (sudah ada)';
@@ -125,7 +125,17 @@ try {
 }
 out("");
 
-// ── 3. Scoring Configs ───────────────────────────────────────────────
+// ── 3. Satker Seeder ─────────────────────────────────────────────────
+out("--- [3/5] Satker Provinsi (seed) ---");
+try {
+    Artisan::call('db:seed', ['--class' => 'SatkerSeeder', '--force' => true]);
+    out("  SatkerSeeder -> " . trim(Artisan::output() ?: 'OK'));
+} catch (\Throwable $e) {
+    out("  ERROR SatkerSeeder: " . $e->getMessage());
+}
+out("");
+
+// ── 4. Scoring Configs ───────────────────────────────────────────────
 out("--- [3/4] Scoring Configs ---");
 try {
     $count = ScoringConfig::count();
@@ -142,8 +152,8 @@ try {
 }
 out("");
 
-// ── 4. Cache ─────────────────────────────────────────────────────────
-out("--- [4/4] Clear & Rebuild Cache ---");
+// ── 5. Cache ─────────────────────────────────────────────────────────
+out("--- [5/5] Clear & Rebuild Cache ---");
 try {
     Artisan::call('config:cache'); out("  config:cache -> " . trim(Artisan::output() ?: 'OK'));
     Artisan::call('route:cache');  out("  route:cache  -> " . trim(Artisan::output() ?: 'OK'));

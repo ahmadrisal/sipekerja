@@ -252,8 +252,9 @@ class PimpinanDashboard extends Component
 
     private function loadKetuaTimFormState(): void
     {
-        $ketuaTimUsers = User::role('Ketua Tim')->with('ledTeams')->get();
+        $ketuaTimUsers = User::role('Ketua Tim')->where('satker_id', activeSatkerId())->with('ledTeams')->get();
         $existingRatings = Rating::where('evaluator_id', Auth::id())
+            ->where('satker_id', activeSatkerId())
             ->where('period_month', $this->month)
             ->where('period_year', $this->year)
             ->get();
@@ -297,6 +298,7 @@ class PimpinanDashboard extends Component
                 'period_year'    => $this->year,
             ],
             [
+                'satker_id'    => activeSatkerId(),
                 'score'        => $entry['score'],
                 'final_score'  => $entry['score'],
                 'volume_work'  => null,
@@ -520,6 +522,7 @@ class PimpinanDashboard extends Component
     private function loadPimpinanPegawaiFormState(): void
     {
         $pegawaiIds = User::role('Pegawai')
+            ->where('satker_id', activeSatkerId())
             ->whereDoesntHave('roles', function ($q) {
                 $q->whereIn('name', ['Ketua Tim', 'Kepala Kabkot', 'Pimpinan', 'Admin']);
             })
@@ -584,7 +587,7 @@ class PimpinanDashboard extends Component
     public function openIncompleteTeamsDialog(): void
     {
         $kabkots  = User::role('Kepala Kabkot')->get();
-        $allTeams = \App\Models\Team::with('leader')->get();
+        $allTeams = \App\Models\Team::where('satker_id', activeSatkerId())->with('leader')->get();
 
         $ratings = KabkotRating::where('period_month', $this->month)
             ->where('period_year', $this->year)
@@ -609,8 +612,8 @@ class PimpinanDashboard extends Component
 
     public function openIncompleteKabkotDialog(): void
     {
-        $kabkots  = User::role('Kepala Kabkot')->orderBy('name')->get();
-        $allTeams = \App\Models\Team::all();
+        $kabkots  = User::role('Kepala Kabkot')->get()->sortBy('name')->values();
+        $allTeams = \App\Models\Team::where('satker_id', activeSatkerId())->get();
 
         $ratings = KabkotRating::where('period_month', $this->month)
             ->where('period_year', $this->year)
@@ -678,7 +681,7 @@ class PimpinanDashboard extends Component
     private function buildKabkotStats(): array
     {
         $kabkots  = User::role('Kepala Kabkot')->get();
-        $allTeams = \App\Models\Team::all();
+        $allTeams = \App\Models\Team::where('satker_id', activeSatkerId())->get();
 
         if ($kabkots->isEmpty() || $allTeams->isEmpty()) {
             return ['incomplete_teams' => 0, 'incomplete_kabkots' => 0,
@@ -720,6 +723,7 @@ class PimpinanDashboard extends Component
 
         // Only show pure Pegawai (not Ketua Tim / Kepala Kabkot)
         $pegawaiOnlyIds = User::role('Pegawai')
+            ->where('satker_id', activeSatkerId())
             ->whereDoesntHave('roles', function ($q) {
                 $q->whereIn('name', ['Ketua Tim', 'Kepala Kabkot', 'Pimpinan', 'Admin']);
             })
@@ -855,12 +859,13 @@ class PimpinanDashboard extends Component
 
     private function buildKetuaTimData(): array
     {
-        $ketuaTimUsers = User::role('Ketua Tim')->with('ledTeams')->orderBy('name')->get();
+        $ketuaTimUsers = User::role('Ketua Tim')->where('satker_id', activeSatkerId())->with('ledTeams')->orderBy('name')->get();
 
         $ketuaIds = $ketuaTimUsers->pluck('id')->toArray();
 
         // Ratings given by each KT to their members (for rekomendasi)
         $memberRatings = Rating::whereIn('evaluator_id', $ketuaIds)
+            ->where('satker_id', activeSatkerId())
             ->where('period_month', $this->month)
             ->where('period_year', $this->year)
             ->where('score', '>', 0)
@@ -868,6 +873,7 @@ class PimpinanDashboard extends Component
 
         // Ratings given by Pimpinan to KT (for nilai_akhir)
         $pimpinanRatings = Rating::where('evaluator_id', Auth::id())
+            ->where('satker_id', activeSatkerId())
             ->whereIn('target_user_id', $ketuaIds)
             ->where('period_month', $this->month)
             ->where('period_year', $this->year)
