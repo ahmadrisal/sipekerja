@@ -70,6 +70,9 @@
         @endauth
     </div>
 
+    @auth
+        <livewire:auth.change-password />
+    @endauth
     @livewireScripts
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     @stack('scripts')

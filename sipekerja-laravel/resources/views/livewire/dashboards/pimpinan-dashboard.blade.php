@@ -215,10 +215,10 @@
                             </td>
                             <td class="px-4 py-4 text-center">
                                 @if($u->pimpinan_score !== null)
-                                    <span class="text-lg font-black italic {{ $u->nilai_akhir >= 80 ? 'text-emerald-600' : ($u->nilai_akhir >= 60 ? 'text-amber-500' : 'text-red-500') }}">{{ number_format($u->nilai_akhir, 2) }}</span>
+                                    <span class="text-lg font-black italic {{ $u->nilai_akhir >= 80 ? 'text-emerald-600' : ($u->nilai_akhir >= 60 ? 'text-amber-500' : 'text-red-500') }}">{{ number_format($u->nilai_akhir, 0, ',', '.') }}</span>
                                     <p class="text-[7px] font-black uppercase tracking-widest text-minimal-indigo mt-0.5">Pimpinan</p>
                                 @elseif($u->nilai_akhir !== null)
-                                    <span class="text-lg font-black italic {{ $u->nilai_akhir >= 80 ? 'text-emerald-600' : ($u->nilai_akhir >= 60 ? 'text-amber-500' : 'text-red-500') }}">{{ number_format($u->nilai_akhir, 2) }}</span>
+                                    <span class="text-lg font-black italic {{ $u->nilai_akhir >= 80 ? 'text-emerald-600' : ($u->nilai_akhir >= 60 ? 'text-amber-500' : 'text-red-500') }}">{{ number_format($u->nilai_akhir, 0, ',', '.') }}</span>
                                     <p class="text-[7px] font-black uppercase tracking-widest text-slate-300 mt-0.5">Avg Tim</p>
                                 @else
                                     <span class="text-lg font-black italic text-slate-200">—</span>
@@ -274,7 +274,7 @@
                                             <thead style="background:#eef2ff">
                                                 <tr class="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">
                                                     <th class="px-4 py-3 border-b border-slate-100">Tim / Ketua</th>
-                                                    <th class="px-4 py-3 border-b border-slate-100 text-center">Nilai Dasar</th>
+                                                    <th class="px-4 py-3 border-b border-slate-100 text-center">Nilai Kinerja</th>
                                                     <th class="px-4 py-3 border-b border-slate-100">Volume</th>
                                                     <th class="px-4 py-3 border-b border-slate-100">Kualitas</th>
                                                     <th class="px-4 py-3 border-b border-slate-100 text-center">Nilai Akhir</th>
@@ -422,7 +422,7 @@
                             </div>
                             <div class="flex-shrink-0 text-right">
                                 @if($u->nilai_akhir !== null)
-                                    <p class="text-xl font-black italic {{ $u->nilai_akhir >= 80 ? 'text-emerald-600' : ($u->nilai_akhir >= 60 ? 'text-amber-500' : 'text-red-500') }} leading-none">{{ number_format($u->nilai_akhir, 2) }}</p>
+                                    <p class="text-xl font-black italic {{ $u->nilai_akhir >= 80 ? 'text-emerald-600' : ($u->nilai_akhir >= 60 ? 'text-amber-500' : 'text-red-500') }} leading-none">{{ number_format($u->nilai_akhir, 0, ',', '.') }}</p>
                                     <p class="text-[7px] font-black uppercase tracking-widest mt-0.5 {{ $u->pimpinan_score !== null ? 'text-minimal-indigo' : 'text-slate-300' }}">{{ $u->pimpinan_score !== null ? 'Pimpinan' : 'Avg Tim' }}</p>
                                 @else
                                     <p class="text-xl font-black italic text-slate-200 leading-none">—</p>
@@ -552,7 +552,7 @@
                                 <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">Tidak Ada Pekerjaan — skor 0</p>
                                 @else
                                 <div class="flex items-center gap-3">
-                                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest w-24 flex-shrink-0">Nilai Dasar</label>
+                                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest w-24 flex-shrink-0">Nilai Kinerja</label>
                                     <div class="flex items-center gap-2">
                                         <input
                                             x-model="score"
@@ -697,16 +697,12 @@
                                     </div>
 
                                     {{-- Rekomendasi --}}
-                                    <div class="px-4 py-2.5 border-b border-slate-50 grid grid-cols-3 gap-2">
+                                    <div class="px-4 py-2.5 border-b border-slate-50 grid grid-cols-2 gap-2">
                                         <div class="text-center">
                                             <p class="text-[8px] font-black uppercase tracking-widest text-slate-400">Rata-rata</p>
                                             <p class="text-sm font-black {{ $team['avg'] ? 'text-minimal-indigo' : 'text-slate-300' }} italic">{{ $team['avg'] ?? '-' }}</p>
                                         </div>
-                                        <div class="text-center border-x border-slate-100">
-                                            <p class="text-[8px] font-black uppercase tracking-widest text-slate-400">Kuartil 3</p>
-                                            <p class="text-sm font-black {{ $team['q3'] ? 'text-amber-500' : 'text-slate-300' }} italic">{{ $team['q3'] ?? '-' }}</p>
-                                        </div>
-                                        <div class="text-center">
+                                        <div class="text-center border-l border-slate-100">
                                             <p class="text-[8px] font-black uppercase tracking-widest text-slate-400">Tertinggi</p>
                                             <p class="text-sm font-black {{ $team['max'] ? 'text-emerald-600' : 'text-slate-300' }} italic">{{ $team['max'] ?? '-' }}</p>
                                         </div>
@@ -771,7 +767,6 @@
                                     </th>
                                     <th class="px-5 py-4 border-b border-slate-100">Tim Kerja</th>
                                     <th class="px-4 py-4 border-b border-slate-100 text-center">Rata-rata Tim</th>
-                                    <th class="px-4 py-4 border-b border-slate-100 text-center text-amber-500">Kuartil 3</th>
                                     <th class="px-4 py-4 border-b border-slate-100 text-center text-emerald-600">Tertinggi</th>
                                     <th class="px-4 py-4 border-b border-slate-100 text-center">Nilai</th>
                                     <th class="px-5 py-4 border-b border-slate-100 text-right">Aksi</th>
@@ -823,9 +818,6 @@
                                                 @if($team['rated_count'] > 0)
                                                     <p class="text-[8px] text-slate-300 font-bold uppercase tracking-widest">{{ $team['rated_count'] }} peg</p>
                                                 @endif
-                                            </td>
-                                            <td class="px-4 py-4 text-center">
-                                                <span class="text-base font-black italic {{ $team['q3'] ? 'text-amber-500' : 'text-slate-200' }}">{{ $team['q3'] ?? '-' }}</span>
                                             </td>
                                             <td class="px-4 py-4 text-center">
                                                 <span class="text-base font-black italic {{ $team['max'] ? 'text-emerald-600' : 'text-slate-200' }}">{{ $team['max'] ?? '-' }}</span>
@@ -1001,16 +993,12 @@
                     </div>
 
                     {{-- Recommendation badges --}}
-                    <div class="px-4 pb-3 grid grid-cols-3 gap-2">
+                    <div class="px-4 pb-3 grid grid-cols-2 gap-2">
                         <div class="rounded-xl px-2 py-1.5 text-center" style="background:#f0fdf4">
                             <p class="text-[8px] font-black uppercase tracking-widest text-emerald-500">Avg Tim</p>
                             <p class="text-sm font-black italic {{ $kabkot->avg_score >= 80 ? 'text-emerald-600' : ($kabkot->avg_score >= 60 ? 'text-amber-500' : ($kabkot->avg_score > 0 ? 'text-red-500' : 'text-slate-300')) }}">
                                 {{ $kabkot->avg_score ?? '—' }}
                             </p>
-                        </div>
-                        <div class="rounded-xl px-2 py-1.5 text-center" style="background:#faf5ff">
-                            <p class="text-[8px] font-black uppercase tracking-widest text-purple-500">Q3 Tim</p>
-                            <p class="text-sm font-black italic text-purple-600">{{ $kabkot->q3_score ?? '—' }}</p>
                         </div>
                         <div class="rounded-xl px-2 py-1.5 text-center" style="background:#eff6ff">
                             <p class="text-[8px] font-black uppercase tracking-widest text-blue-500">Maks Tim</p>
@@ -1118,7 +1106,6 @@
                                         Avg Tim {!! $kSortIcon('avg_score') !!}
                                     </button>
                                 </th>
-                                <th class="px-4 py-4 text-center text-purple-400">Q3 Tim</th>
                                 <th class="px-4 py-4 text-center text-blue-400">Maks Tim</th>
                                 <th class="px-4 py-4 text-center">
                                     <button wire:click="sortKabkot('pimpinan_score')" class="flex items-center gap-0.5 mx-auto hover:text-minimal-indigo transition-colors {{ $kabkotSortKey === 'pimpinan_score' ? 'text-minimal-indigo' : '' }}">
@@ -1155,9 +1142,6 @@
                                     <span class="text-base font-black italic {{ $kabkot->avg_score >= 80 ? 'text-emerald-600' : ($kabkot->avg_score >= 60 ? 'text-amber-500' : ($kabkot->avg_score > 0 ? 'text-red-500' : 'text-slate-200')) }}">
                                         {{ $kabkot->avg_score ?? '—' }}
                                     </span>
-                                </td>
-                                <td class="px-4 py-4 text-center">
-                                    <span class="text-base font-black italic text-purple-500">{{ $kabkot->q3_score ?? '—' }}</span>
                                 </td>
                                 <td class="px-4 py-4 text-center">
                                     <span class="text-base font-black italic text-blue-500">{{ $kabkot->max_score ?? '—' }}</span>

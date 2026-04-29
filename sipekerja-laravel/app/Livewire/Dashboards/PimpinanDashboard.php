@@ -741,7 +741,8 @@ class PimpinanDashboard extends Component
             $u->max_score = $teamScores->count() ? round($teamScores->max(), 2) : null;
             $rec = $pimpinanPegawaiScores->get($u->id);
             $u->pimpinan_score = $rec ? (float) $rec->score : null;
-            $u->nilai_akhir    = $u->pimpinan_score ?? ($u->averageScore > 0 ? $u->averageScore : null);
+            $raw = $u->pimpinan_score ?? ($u->averageScore > 0 ? $u->averageScore : null);
+            $u->nilai_akhir = $raw !== null ? (int) round($raw, 0) : null;
             return $u;
         });
 

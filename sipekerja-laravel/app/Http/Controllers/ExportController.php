@@ -52,8 +52,9 @@ class ExportController extends Controller
         $rows = [];
         $no   = 1;
         foreach ($data as $u) {
-            $rec        = $pimpinanScores->get($u->id);
-            $nilaiAkhir = $rec ? round((float) $rec->score, 2) : ($u->averageScore > 0 ? $u->averageScore : null);
+            $rec     = $pimpinanScores->get($u->id);
+            $raw     = $rec ? (float) $rec->score : ($u->averageScore > 0 ? $u->averageScore : null);
+            $nilaiAkhir = $raw !== null ? (int) round($raw, 0) : null;
 
             $rows[] = [
                 $no++,

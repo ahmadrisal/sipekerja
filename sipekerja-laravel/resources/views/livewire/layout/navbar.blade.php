@@ -23,18 +23,49 @@
 
         <!-- Notification & Profile Cluster -->
         <div class="flex items-center gap-3 pl-6 border-l border-white/10">
-            <!-- User Info -->
-            <div class="flex items-center gap-3 group cursor-default">
-                <div class="text-right">
-                    <p class="text-[10px] font-black uppercase tracking-tight text-white">{{ Auth::user()->name }}</p>
-                    <p class="text-[8px] font-black uppercase tracking-widest text-white/50">{{ session('active_role') }}</p>
-                </div>
-                <div class="w-9 h-9 rounded-xl bg-white/20 border border-white/20 overflow-hidden flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                    @if(Auth::user()->avatar_url)
-                        <img src="{{ Auth::user()->avatar_url }}" alt="Avatar" class="w-full h-full object-cover">
-                    @else
-                        <span class="text-sm font-black text-white italic">{{ substr(Auth::user()->name, 0, 1) }}</span>
-                    @endif
+            <!-- User Info + Profile Dropdown -->
+            <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                <button @click="open = !open" class="flex items-center gap-3 group cursor-pointer">
+                    <div class="text-right">
+                        <p class="text-[10px] font-black uppercase tracking-tight text-white">{{ Auth::user()->name }}</p>
+                        <p class="text-[8px] font-black uppercase tracking-widest text-white/50">{{ session('active_role') }}</p>
+                    </div>
+                    <div class="w-9 h-9 rounded-xl bg-white/20 border border-white/20 overflow-hidden flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform group-hover:border-white/40">
+                        @if(Auth::user()->avatar_url)
+                            <img src="{{ Auth::user()->avatar_url }}" alt="Avatar" class="w-full h-full object-cover">
+                        @else
+                            <span class="text-sm font-black text-white italic">{{ substr(Auth::user()->name, 0, 1) }}</span>
+                        @endif
+                    </div>
+                </button>
+
+                <!-- Dropdown -->
+                <div
+                    x-show="open"
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
+                    x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                    x-transition:leave="transition ease-in duration-100"
+                    x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                    x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
+                    class="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50"
+                    style="display: none;"
+                >
+                    <div class="px-4 py-3 border-b border-slate-50">
+                        <p class="text-[10px] font-black text-slate-700 truncate">{{ Auth::user()->name }}</p>
+                        <p class="text-[9px] font-mono text-slate-400 truncate">{{ Auth::user()->nip }}</p>
+                    </div>
+                    <div class="p-1.5">
+                        <button
+                            @click="open = false; $dispatch('open-change-password')"
+                            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-indigo-50 transition-colors group"
+                        >
+                            <div class="w-7 h-7 rounded-lg bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-minimal-indigo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            </div>
+                            <span class="text-[10px] font-black text-slate-600 uppercase tracking-widest group-hover:text-minimal-indigo transition-colors">Ganti Password</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 

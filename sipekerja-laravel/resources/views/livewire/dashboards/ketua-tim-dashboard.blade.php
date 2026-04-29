@@ -272,9 +272,9 @@
                                     >
                                 </div>
 
-                                {{-- Nilai Dasar --}}
+                                {{-- Nilai Kinerja --}}
                                 <div class="px-4 py-3 flex items-center justify-between border-b border-slate-50 transition-opacity" :class="hasWork ? 'opacity-100' : 'opacity-30 pointer-events-none'">
-                                    <span class="text-xs font-black text-slate-600 uppercase tracking-wide">Nilai Dasar</span>
+                                    <span class="text-xs font-black text-slate-600 uppercase tracking-wide">Nilai Kinerja</span>
                                     <input
                                         x-model="score"
                                         @input="isDirty = true"
@@ -352,7 +352,7 @@
                                     <th class="px-5 py-4 border-b border-slate-100 w-1/5">Pegawai</th>
                                     <th class="px-5 py-4 border-b border-slate-100 w-1/4">Tim Kerja</th>
                                     <th class="px-4 py-4 border-b border-slate-100 text-center">Ada<br>Pekerjaan?</th>
-                                    <th class="px-4 py-4 border-b border-slate-100 text-center">Nilai Dasar</th>
+                                    <th class="px-4 py-4 border-b border-slate-100 text-center">Nilai Kinerja</th>
                                     <th class="px-4 py-4 border-b border-slate-100">Volume/Kesulitan</th>
                                     <th class="px-4 py-4 border-b border-slate-100">Kualitas Kerja</th>
                                     <th class="px-4 py-4 border-b border-slate-100 text-center text-minimal-indigo italic underline decoration-minimal-indigo/30 decoration-dashed underline-offset-4">Nilai Akhir</th>
