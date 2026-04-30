@@ -59,7 +59,7 @@ class Index extends Component
 
     public function mount()
     {
-        $this->allRoles = Role::all();
+        $this->allRoles = Role::whereNotIn('name', ['Super Admin'])->get();
         $this->uniqueTeams = \App\Models\Team::where('satker_id', activeSatkerId())->orderBy('team_name')->pluck('team_name')->toArray();
     }
 
@@ -370,19 +370,29 @@ class Index extends Component
     {
         $this->validate();
 
+        // Prevent assigning Super Admin via this form
+        $this->selectedRoles = array_filter($this->selectedRoles, fn($r) => $r !== 'Super Admin');
+
         $userData = [
-            'nip' => $this->nip,
+            'nip'      => $this->nip,
             'username' => $this->username,
-            'name' => $this->name,
-            'email' => $this->email,
+            'name'     => $this->name,
+            'email'    => $this->email,
         ];
 
         if ($this->password) {
             $userData['password'] = Hash::make($this->password);
         }
 
-        $user = User::updateOrCreate(['id' => $this->userId], $userData);
-        $user->syncRoles($this->selectedRoles);
+        if ($this->userId) {
+            $user = User::findOrFail($this->userId);
+            $user->update($userData);
+        } else {
+            $userData['satker_id'] = activeSatkerId();
+            $user = User::create($userData);
+        }
+
+        $user->syncRoles(array_values($this->selectedRoles));
 
         $this->isModalOpen = false;
         $this->resetForm();
