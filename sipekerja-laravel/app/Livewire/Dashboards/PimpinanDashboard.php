@@ -165,7 +165,7 @@ class PimpinanDashboard extends Component
 
     private function calcFinalScore(float $score, ?string $volumeWork, ?string $qualityWork): float
     {
-        $c = ScoringConfig::getAll();
+        $c = ScoringConfig::getAll(activeSatkerId());
 
         $volScore = match($volumeWork) {
             'Ringan' => $c['volume_ringan'] ?? 60,
@@ -825,7 +825,7 @@ class PimpinanDashboard extends Component
         });
         $kabkotStats  = $this->buildKabkotStats();
 
-        $sc = ScoringConfig::getAll();
+        $sc = ScoringConfig::getAll(activeSatkerId());
 
         return view('livewire.dashboards.pimpinan-dashboard', [
             'rekap'         => $data,

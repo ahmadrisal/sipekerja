@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Satker;
+use App\Models\ScoringConfig;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +20,15 @@ class EnsureRoleContext
     {
         if (Auth::check()) {
             $user = Auth::user();
+
+            // Block non-Super-Admin users during maintenance
+            if (!$user->hasRole('Super Admin') && ScoringConfig::getMaintenanceMode()) {
+                Auth::logout();
+                $request->session()->invalidate();
+                return redirect()->route('login')
+                    ->with('error', 'Sistem sedang dalam maintenance. Silakan coba beberapa saat lagi.');
+            }
+
             $roles = $user->getRoleNames();
 
             if ($roles->isEmpty()) {

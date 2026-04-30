@@ -169,13 +169,20 @@
 
     {{-- Action Buttons --}}
     <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-        <button
-            wire:click="resetToDefault"
-            wire:confirm="Reset semua ke nilai default? Perubahan yang belum disimpan akan hilang."
-            class="px-8 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all active:scale-95"
-        >
-            Reset ke Default
-        </button>
+        <div class="flex items-center gap-3">
+            @if($hasLocalOverride)
+            <span class="inline-flex px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest bg-amber-50 text-amber-700 border border-amber-200">Override Lokal Aktif</span>
+            <button
+                wire:click="resetToGlobal"
+                wire:confirm="Reset ke bobot global (dari Super Admin)? Override lokal akan dihapus."
+                class="px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all active:scale-95"
+            >
+                Reset ke Global
+            </button>
+            @else
+            <span class="inline-flex px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200">Pakai Bobot Global</span>
+            @endif
+        </div>
         <button
             wire:click="save"
             wire:loading.attr="disabled"

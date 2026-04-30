@@ -26,6 +26,12 @@ Route::middleware(['auth', 'role.context'])->group(function () {
     Route::get('/users/template-excel', [\App\Http\Controllers\ExcelTemplateController::class, 'download'])->middleware('role.context:Admin')->name('users.template');
     Route::get('/konfigurasi', \App\Livewire\Konfigurasi\Index::class)->middleware('role.context:Admin')->name('konfigurasi');
 
+    // Super Admin
+    Route::get('/super-admin', \App\Livewire\SuperAdmin\Dashboard::class)->middleware('role.context:Super Admin')->name('super-admin.dashboard');
+    Route::get('/super-admin/export/nilai-pegawai',   [\App\Http\Controllers\ExportController::class, 'superPegawai'])->middleware('role.context:Super Admin')->name('export.super.pegawai');
+    Route::get('/super-admin/export/nilai-ketua-tim', [\App\Http\Controllers\ExportController::class, 'superKetuaTim'])->middleware('role.context:Super Admin')->name('export.super.ketuaTim');
+    Route::get('/super-admin/export/nilai-kabkot',    [\App\Http\Controllers\ExportController::class, 'superKabkot'])->middleware('role.context:Super Admin')->name('export.super.kabkot');
+
     // Export (Pimpinan)
     Route::get('/export/nilai-pegawai',   [\App\Http\Controllers\ExportController::class, 'pegawai'])->middleware('role.context:Pimpinan')->name('export.pegawai');
     Route::get('/export/nilai-ketua-tim', [\App\Http\Controllers\ExportController::class, 'ketuaTim'])->middleware('role.context:Pimpinan')->name('export.ketuaTim');

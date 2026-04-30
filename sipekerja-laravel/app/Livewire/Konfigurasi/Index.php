@@ -14,6 +14,7 @@ class Index extends Component
 
     public bool $showSuccess = false;
     public string $errorMessage = '';
+    public bool $hasLocalOverride = false;
 
     public function mount(): void
     {
@@ -22,32 +23,36 @@ class Index extends Component
 
     private function loadConfig(): void
     {
-        $configs = ScoringConfig::all()->keyBy('key');
+        $satkerId = activeSatkerId();
+        $c = ScoringConfig::getAll($satkerId);
 
         $this->bobot = [
-            'weight_score'   => $configs['weight_score']->value   ?? 80,
-            'weight_volume'  => $configs['weight_volume']->value  ?? 10,
-            'weight_quality' => $configs['weight_quality']->value ?? 10,
+            'weight_score'   => $c['weight_score']   ?? 80,
+            'weight_volume'  => $c['weight_volume']  ?? 10,
+            'weight_quality' => $c['weight_quality'] ?? 10,
         ];
 
         $this->volume = [
-            'volume_ringan' => $configs['volume_ringan']->value ?? 60,
-            'volume_sedang' => $configs['volume_sedang']->value ?? 80,
-            'volume_berat'  => $configs['volume_berat']->value  ?? 100,
+            'volume_ringan' => $c['volume_ringan'] ?? 60,
+            'volume_sedang' => $c['volume_sedang'] ?? 80,
+            'volume_berat'  => $c['volume_berat']  ?? 100,
         ];
 
         $this->kualitas = [
-            'quality_kurang'      => $configs['quality_kurang']->value      ?? 50,
-            'quality_cukup'       => $configs['quality_cukup']->value       ?? 75,
-            'quality_baik'        => $configs['quality_baik']->value        ?? 90,
-            'quality_sangat_baik' => $configs['quality_sangat_baik']->value ?? 100,
+            'quality_kurang'      => $c['quality_kurang']      ?? 50,
+            'quality_cukup'       => $c['quality_cukup']       ?? 75,
+            'quality_baik'        => $c['quality_baik']        ?? 90,
+            'quality_sangat_baik' => $c['quality_sangat_baik'] ?? 100,
         ];
+
+        $this->hasLocalOverride = $satkerId
+            && ScoringConfig::where('satker_id', $satkerId)->exists();
     }
 
     public function save(): void
     {
         $this->errorMessage = '';
-        $this->showSuccess = false;
+        $this->showSuccess  = false;
 
         $totalBobot = array_sum($this->bobot);
         if (abs($totalBobot - 100) > 0.01) {
@@ -55,28 +60,32 @@ class Index extends Component
             return;
         }
 
-        foreach ([$this->bobot, $this->volume, $this->kualitas] as $group) {
-            foreach ($group as $key => $value) {
-                if (!is_numeric($value) || $value < 0) {
-                    $this->errorMessage = "Semua nilai harus berupa angka positif.";
-                    return;
-                }
+        foreach (array_merge($this->bobot, $this->volume, $this->kualitas) as $value) {
+            if (!is_numeric($value) || $value < 0) {
+                $this->errorMessage = "Semua nilai harus berupa angka positif.";
+                return;
             }
         }
 
+        $satkerId = activeSatkerId();
         $all = array_merge($this->bobot, $this->volume, $this->kualitas);
+
         foreach ($all as $key => $value) {
-            ScoringConfig::where('key', $key)->update(['value' => (float) $value]);
+            if ($satkerId) {
+                ScoringConfig::setForSatker($satkerId, $key, (float) $value);
+            } else {
+                ScoringConfig::setGlobal($key, (float) $value);
+            }
         }
 
-        ScoringConfig::clearCache();
-        $this->recalculateAllRatings();
+        $this->recalculateRatingsForSatker($satkerId);
+        $this->hasLocalOverride = true;
         $this->showSuccess = true;
     }
 
-    private function recalculateAllRatings(): void
+    private function recalculateRatingsForSatker(?string $satkerId): void
     {
-        $c = ScoringConfig::getAll();
+        $c = ScoringConfig::getAll($satkerId);
 
         $wScore   = $c['weight_score']   / 100;
         $wVolume  = $c['weight_volume']  / 100;
@@ -87,7 +96,6 @@ class Index extends Component
             'Sedang' => $c['volume_sedang'],
             'Berat'  => $c['volume_berat'],
         ];
-
         $qualMap = [
             'Kurang'      => $c['quality_kurang'],
             'Cukup'       => $c['quality_cukup'],
@@ -95,27 +103,28 @@ class Index extends Component
             'Sangat Baik' => $c['quality_sangat_baik'],
         ];
 
-        Rating::all()->each(function (Rating $rating) use ($wScore, $wVolume, $wQuality, $volMap, $qualMap) {
+        $query = $satkerId
+            ? Rating::where('satker_id', $satkerId)
+            : Rating::query();
+
+        $query->each(function (Rating $rating) use ($wScore, $wVolume, $wQuality, $volMap, $qualMap) {
             $volScore  = $volMap[$rating->volume_work]   ?? $volMap['Sedang'];
             $qualScore = $qualMap[$rating->quality_work] ?? $qualMap['Cukup'];
-
-            $rating->final_score = round(
-                ($rating->score * $wScore) + ($volScore * $wVolume) + ($qualScore * $wQuality),
-                2
-            );
-            $rating->save();
+            $rating->update(['final_score' => round(
+                ($rating->score * $wScore) + ($volScore * $wVolume) + ($qualScore * $wQuality), 2
+            )]);
         });
     }
 
-    public function resetToDefault(): void
+    public function resetToGlobal(): void
     {
-        foreach (ScoringConfig::defaults() as $d) {
-            ScoringConfig::where('key', $d['key'])->update(['value' => $d['value']]);
+        $satkerId = activeSatkerId();
+        if ($satkerId) {
+            ScoringConfig::resetSatkerToGlobal($satkerId);
         }
-        ScoringConfig::clearCache();
-        $this->recalculateAllRatings();
+        $this->recalculateRatingsForSatker($satkerId);
         $this->loadConfig();
-        $this->showSuccess = true;
+        $this->showSuccess  = true;
         $this->errorMessage = '';
     }
 

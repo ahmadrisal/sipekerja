@@ -126,7 +126,7 @@ class Index extends Component
 
     private function calculateFinalScore($score, $volumeWork, $qualityWork): float
     {
-        $c = ScoringConfig::getAll();
+        $c = ScoringConfig::getAll(activeSatkerId());
 
         $volScore = match($volumeWork) {
             'Ringan' => $c['volume_ringan'] ?? 60,
@@ -171,7 +171,7 @@ class Index extends Component
             }
         }
 
-        $c = ScoringConfig::getAll();
+        $c = ScoringConfig::getAll(activeSatkerId());
 
         return view('livewire.penilaian.index', [
             'members'    => $membersData,
