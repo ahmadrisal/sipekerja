@@ -10,9 +10,15 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
+use Livewire\WithPagination;
+use Spatie\Permission\Models\Role;
 
 class Dashboard extends Component
 {
+    use WithPagination;
+
+    protected string $paginationTheme = 'tailwind';
+
     public string $activeTab = 'dashboard';
 
     // Period filter (shared across tabs)
@@ -51,6 +57,31 @@ class Dashboard extends Component
     public ?string $moveUserId = null;
     public ?string $moveTargetSatkerId = null;
 
+    // Kelola Pegawai tab
+    public string $pgFilterSatker = '';
+    public string $pgSearch = '';
+    public string $pgFilterRole = 'ALL';
+
+    // Edit user modal
+    public bool $showEditUserModal = false;
+    public ?string $editUserId = null;
+    public string $editUserName = '';
+    public string $editUserNip = '';
+    public string $editUserEmail = '';
+    public string $editUserUsername = '';
+    public array $editUserRoles = [];
+    public ?string $editUserSatkerId = null;
+
+    // Reset password modal
+    public bool $showResetPwModal = false;
+    public ?string $resetPwUserId = null;
+    public string $resetPwNew = '';
+
+    // Delete user modal
+    public bool $showDeleteUserModal = false;
+    public ?string $deleteUserId = null;
+    public string $deleteUserName = '';
+
     // Konfigurasi
     public array $configValues = [];
     public bool $maintenanceMode = false;
@@ -72,8 +103,13 @@ class Dashboard extends Component
     {
         $this->activeTab = $tab;
         $this->reset(['adminSearch', 'selectedUserId', 'moveUserSearch', 'moveUserId']);
+        $this->resetPage();
         if ($tab === 'konfigurasi') $this->loadConfigValues();
     }
+
+    public function updatedPgFilterSatker(): void { $this->resetPage(); }
+    public function updatedPgSearch(): void { $this->resetPage(); }
+    public function updatedPgFilterRole(): void { $this->resetPage(); }
 
     public function updatedMonth(): void {}
     public function updatedYear(): void {}
@@ -230,6 +266,106 @@ class Dashboard extends Component
         session()->flash('success', "{$user->name} berhasil dipindahkan ke {$satker->name}.");
     }
 
+    // ── Kelola Pegawai ────────────────────────────────────────────────
+
+    public function openEditUser(string $id): void
+    {
+        $user = User::with('roles')->findOrFail($id);
+        $this->editUserId       = $user->id;
+        $this->editUserName     = $user->name;
+        $this->editUserNip      = $user->nip;
+        $this->editUserEmail    = $user->email;
+        $this->editUserUsername = $user->username ?? '';
+        $this->editUserRoles    = $user->roles->pluck('name')->toArray();
+        $this->editUserSatkerId = $user->satker_id;
+        $this->showEditUserModal = true;
+    }
+
+    public function saveEditUser(): void
+    {
+        $this->validate([
+            'editUserName'     => 'required|min:2|max:100',
+            'editUserNip'      => 'required|unique:users,nip,' . $this->editUserId,
+            'editUserEmail'    => 'required|email|unique:users,email,' . $this->editUserId,
+            'editUserUsername' => 'nullable|unique:users,username,' . $this->editUserId,
+            'editUserRoles'    => 'required|array|min:1',
+            'editUserSatkerId' => 'nullable|exists:satkers,id',
+        ], [
+            'editUserNip.unique'   => 'NIP sudah digunakan user lain.',
+            'editUserEmail.unique' => 'Email sudah digunakan user lain.',
+            'editUserRoles.min'    => 'Pilih minimal 1 role.',
+        ]);
+
+        $user = User::findOrFail($this->editUserId);
+        $user->update([
+            'name'      => $this->editUserName,
+            'nip'       => $this->editUserNip,
+            'email'     => $this->editUserEmail,
+            'username'  => $this->editUserUsername ?: null,
+            'satker_id' => $this->editUserSatkerId,
+        ]);
+        $user->syncRoles($this->editUserRoles);
+
+        $this->showEditUserModal = false;
+        $this->resetErrorBag();
+        session()->flash('success', "Data {$user->name} berhasil diperbarui.");
+    }
+
+    public function openResetPw(string $id): void
+    {
+        $this->resetPwUserId = $id;
+        $this->resetPwNew    = '';
+        $this->showResetPwModal = true;
+    }
+
+    public function saveResetPw(): void
+    {
+        $this->validate(['resetPwNew' => 'required|min:6'], [
+            'resetPwNew.min' => 'Password minimal 6 karakter.',
+        ]);
+        $user = User::findOrFail($this->resetPwUserId);
+        $user->update(['password' => Hash::make($this->resetPwNew)]);
+        $this->showResetPwModal = false;
+        session()->flash('success', "Password {$user->name} berhasil direset.");
+    }
+
+    public function confirmDeleteUser(string $id): void
+    {
+        $user = User::findOrFail($id);
+        $this->deleteUserId   = $id;
+        $this->deleteUserName = $user->name;
+        $this->showDeleteUserModal = true;
+    }
+
+    public function executeDeleteUser(): void
+    {
+        if ($this->deleteUserId === auth()->id()) {
+            session()->flash('error', 'Tidak bisa menghapus akun sendiri.');
+            $this->showDeleteUserModal = false;
+            return;
+        }
+        User::findOrFail($this->deleteUserId)->delete();
+        $name = $this->deleteUserName;
+        $this->showDeleteUserModal = false;
+        $this->reset(['deleteUserId', 'deleteUserName']);
+        session()->flash('success', "{$name} berhasil dihapus.");
+    }
+
+    private function getPegawaiQuery()
+    {
+        return User::with(['roles', 'teams', 'satker'])
+            ->when($this->pgFilterSatker, fn($q) => $q->where('satker_id', $this->pgFilterSatker))
+            ->when($this->pgSearch, function ($q) {
+                $s = '%' . $this->pgSearch . '%';
+                $q->where(fn($qq) => $qq
+                    ->where('name', 'like', $s)
+                    ->orWhere('nip', 'like', $s)
+                    ->orWhere('email', 'like', $s));
+            })
+            ->when($this->pgFilterRole !== 'ALL', fn($q) => $q->role($this->pgFilterRole))
+            ->orderBy('name');
+    }
+
     // ── Konfigurasi ──────────────────────────────────────────────────
 
     private function loadConfigValues(): void
@@ -338,8 +474,8 @@ class Dashboard extends Component
         $pegawaiPerTim = DB::table('team_members')
             ->join('teams', 'team_members.team_id', '=', 'teams.id')
             ->when($satkerId, fn($q) => $q->where('teams.satker_id', $satkerId))
-            ->groupBy('teams.id', 'teams.name')
-            ->select('teams.name', DB::raw('COUNT(team_members.user_id) as jumlah'))
+            ->groupBy('teams.id', 'teams.team_name')
+            ->select('teams.team_name as name', DB::raw('COUNT(team_members.user_id) as jumlah'))
             ->orderByDesc('jumlah')
             ->limit(10)
             ->get();
@@ -397,6 +533,12 @@ class Dashboard extends Component
                 ->with(['roles', 'satker'])->limit(10)->get();
         }
 
+        // Kelola Pegawai
+        $pegawaiList = $this->activeTab === 'pegawai' ? $this->getPegawaiQuery()->paginate(15) : collect();
+        $allRoles    = ($this->activeTab === 'pegawai' || $this->showEditUserModal)
+            ? Role::orderBy('name')->get()
+            : collect();
+
         return view('livewire.super-admin.dashboard', [
             'satkers'         => $satkers,
             'rekap'           => $rekap,
@@ -406,6 +548,8 @@ class Dashboard extends Component
             'searchableUsers' => $searchableUsers,
             'moveUserResults' => $moveUserResults,
             'monthNames'      => $this->monthNames,
+            'pegawaiList'     => $pegawaiList,
+            'allRoles'        => $allRoles,
         ])->title('Super Admin — PAKAR');
     }
 }
