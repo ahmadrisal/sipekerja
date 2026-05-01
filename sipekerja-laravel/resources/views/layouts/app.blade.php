@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $title ?? config('app.name', 'PAKAR') }}</title>
+    <title>{{ $title ?? config('app.name', 'SIPAKAR') }}</title>
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
@@ -13,7 +13,7 @@
     <!-- iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="PAKAR">
+    <meta name="apple-mobile-web-app-title" content="SIPAKAR">
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
     <!-- Fonts -->
@@ -51,16 +51,16 @@
 <body class="font-sans antialiased bg-[#f8fafc] text-slate-900">
     <div class="min-h-screen flex">
         @auth
-            @if(!in_array(session('active_role'), ['Ketua Tim', 'Pimpinan', 'Pegawai', 'Super Admin']))
+            @if(!in_array(session('active_role'), ['Ketua Tim', 'Pimpinan', 'Pegawai', 'Super Admin', 'Kepala Kabkot']))
                 <livewire:layout.sidebar />
             @endif
-            <div class="flex-1 flex flex-col min-h-screen {{ !in_array(session('active_role'), ['Ketua Tim', 'Pimpinan', 'Pegawai', 'Super Admin']) ? 'lg:pl-64' : '' }} w-full">
+            <div class="flex-1 flex flex-col min-h-screen {{ !in_array(session('active_role'), ['Ketua Tim', 'Pimpinan', 'Pegawai', 'Super Admin', 'Kepala Kabkot']) ? 'lg:pl-64' : '' }} w-full">
                 <livewire:layout.navbar />
                 <main class="p-6 lg:p-10 flex-1 w-full max-w-none">
                     {{ $slot }}
                 </main>
                 <footer class="p-6 text-center text-xs text-slate-500 border-t border-slate-200/60 bg-white">
-                    &copy; 2026 PAKAR - Badan Pusat Statistik
+                    &copy; 2026 SIPAKAR - Badan Pusat Statistik
                 </footer>
             </div>
         @else

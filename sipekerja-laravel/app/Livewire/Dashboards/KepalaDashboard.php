@@ -2,8 +2,6 @@
 
 namespace App\Livewire\Dashboards;
 
-use App\Models\KabkotRating;
-use App\Models\PimpinanKabkotScore;
 use App\Models\PimpinanPegawaiScore;
 use App\Models\Rating;
 use App\Models\ScoringConfig;
@@ -13,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
-class PimpinanDashboard extends Component
+class KepalaDashboard extends Component
 {
     public $activeTab = 'overview';
     public $month;
@@ -29,7 +27,6 @@ class PimpinanDashboard extends Component
     public $showIncompleteTeamsDialog = false;
     public $showIncompleteEmployeesDialog = false;
     public $reportSearch = '';
-    public $reportData = null;
 
     // Override form state (keyed by rating ID)
     public $overrideFormState = [];
@@ -44,28 +41,11 @@ class PimpinanDashboard extends Component
     public $ktSortKey = 'ketua_name';
     public $ktSortDir = 'asc';
 
-    // Rekap & Override Kabkot
-    public $detailKabkotId = null;
-    public $kabkotOverrideFormState = [];
-    public $showKabkotOverrideValidationDialog = false;
-    public $kabkotSearch  = '';
-    public $kabkotSortKey = 'name';
-    public $kabkotSortDir = 'asc';
-
-    // Nilai langsung pimpinan ke kabkot
-    public $kabkotPimpinanFormState = [];
-
-    // Nilai akhir langsung pimpinan ke pegawai
-    public $pegawaiPimpinanFormState = [];
+    // Nilai akhir langsung kepala ke pegawai
+    public $pegawaiKepalaFormState = [];
 
     // Nilai KT sebagai pegawai (pre-fill dari avg tim, overridable)
     public $ktPegawaiFormState = [];
-
-    // Incomplete stats dialogs (Kabkot)
-    public $showKabkotIncompleteTeamsDialog = false;
-    public $kabkotIncompleteTeamsData = [];
-    public $showKabkotIncompleteKabkotDialog = false;
-    public $kabkotIncompleteKabkotData = [];
 
     private $shouldRefreshCharts = false;
     public $periodConfirmed = false;
@@ -83,8 +63,7 @@ class PimpinanDashboard extends Component
         $this->shouldRefreshCharts = true;
         $this->loadKetuaTimFormState();
         $this->loadKtPegawaiFormState();
-        $this->loadPimpinanKabkotFormState();
-        $this->loadPimpinanPegawaiFormState();
+        $this->loadPegawaiKepalaFormState();
     }
 
     public function handleSort($key)
@@ -207,10 +186,7 @@ class PimpinanDashboard extends Component
         $this->ktFormState = [];
         $this->ktPegawaiFormState = [];
         $this->overrideFormState = [];
-        $this->kabkotPimpinanFormState = [];
-        $this->pegawaiPimpinanFormState = [];
-        $this->kabkotOverrideFormState = [];
-        $this->detailKabkotId = null;
+        $this->pegawaiKepalaFormState = [];
     }
 
     public function updatedYear()
@@ -220,10 +196,7 @@ class PimpinanDashboard extends Component
         $this->ktFormState = [];
         $this->ktPegawaiFormState = [];
         $this->overrideFormState = [];
-        $this->kabkotPimpinanFormState = [];
-        $this->pegawaiPimpinanFormState = [];
-        $this->kabkotOverrideFormState = [];
-        $this->detailKabkotId = null;
+        $this->pegawaiKepalaFormState = [];
     }
 
     public function updatedTeamFilter()
@@ -249,16 +222,6 @@ class PimpinanDashboard extends Component
         }
     }
 
-    public function sortKabkot($col): void
-    {
-        if ($this->kabkotSortKey === $col) {
-            $this->kabkotSortDir = $this->kabkotSortDir === 'asc' ? 'desc' : 'asc';
-        } else {
-            $this->kabkotSortKey = $col;
-            $this->kabkotSortDir = 'asc';
-        }
-    }
-
     public function setReportUserId($id)
     {
         $this->reportUserId = $id;
@@ -267,9 +230,15 @@ class PimpinanDashboard extends Component
         $this->reportSearch = '';
     }
 
+    // ── Nilai Ketua Tim ──────────────────────────────────────────────
+
     private function loadKetuaTimFormState(): void
     {
-        $ketuaTimUsers = User::role('Ketua Tim')->where('satker_id', activeSatkerId())->with('ledTeams')->get();
+        $ketuaTimUsers = User::role('Ketua Tim')
+            ->where('satker_id', activeSatkerId())
+            ->with('ledTeams')
+            ->get();
+
         $existingRatings = Rating::where('evaluator_id', Auth::id())
             ->where('satker_id', activeSatkerId())
             ->where('period_month', $this->month)
@@ -480,151 +449,16 @@ class PimpinanDashboard extends Component
         }
 
         $this->dispatch('refreshKtCharts', ktChartData: [
-            'scatter'    => $scatter,
-            'barLabels'  => $barLabels,
-            'barNips'    => $barNips,
-            'barSeries'  => $barSeries,
+            'scatter'   => $scatter,
+            'barLabels' => $barLabels,
+            'barNips'   => $barNips,
+            'barSeries' => $barSeries,
         ]);
     }
 
-    // ── Rekap & Override Kabkot ───────────────────────────────────────
+    // ── Nilai Akhir Kepala ke Pegawai ────────────────────────────────
 
-    public function setDetailKabkot($id): void
-    {
-        if ($this->detailKabkotId === $id) {
-            $this->detailKabkotId = null;
-            $this->kabkotOverrideFormState = [];
-            return;
-        }
-        $this->detailKabkotId = $id;
-        $this->loadKabkotOverrideFormState();
-    }
-
-    private function loadKabkotOverrideFormState(): void
-    {
-        if (!$this->detailKabkotId) {
-            $this->kabkotOverrideFormState = [];
-            return;
-        }
-
-        $ratings = KabkotRating::where('kabkot_id', $this->detailKabkotId)
-            ->where('period_month', $this->month)
-            ->where('period_year', $this->year)
-            ->with(['team', 'evaluator'])
-            ->orderBy('team_id')
-            ->get();
-
-        $this->kabkotOverrideFormState = [];
-        foreach ($ratings as $r) {
-            $this->kabkotOverrideFormState[$r->id] = [
-                'team_name'      => $r->team->team_name ?? '-',
-                'evaluator_name' => $r->evaluator->name ?? '-',
-                'score'          => $r->score > 0 ? $r->score : '',
-                'has_work'       => $r->score > 0,
-                'overridden'     => (bool) $r->overridden_by,
-                'flag_hidden'    => (bool) $r->override_flag_hidden,
-                'is_dirty'       => false,
-            ];
-        }
-    }
-
-    public function saveKabkotOverride($ratingId): void
-    {
-        $entry = $this->kabkotOverrideFormState[$ratingId];
-
-        if (!$entry['score'] || $entry['score'] < 1 || $entry['score'] > 100) {
-            $this->showKabkotOverrideValidationDialog = true;
-            return;
-        }
-
-        KabkotRating::where('id', $ratingId)->update([
-            'score'        => (float) $entry['score'],
-            'overridden_by' => Auth::id(),
-        ]);
-
-        $this->kabkotOverrideFormState[$ratingId]['is_dirty']  = false;
-        $this->kabkotOverrideFormState[$ratingId]['overridden'] = true;
-    }
-
-    public function resetKabkotOverride($ratingId): void
-    {
-        KabkotRating::where('id', $ratingId)->update(['overridden_by' => null, 'override_flag_hidden' => false]);
-        $this->kabkotOverrideFormState[$ratingId]['overridden']   = false;
-        $this->kabkotOverrideFormState[$ratingId]['flag_hidden']  = false;
-    }
-
-    public function hideKabkotOverrideFlag($ratingId): void
-    {
-        KabkotRating::where('id', $ratingId)->update(['override_flag_hidden' => true]);
-        $this->kabkotOverrideFormState[$ratingId]['flag_hidden'] = true;
-    }
-
-    // ── Nilai Langsung Pimpinan ke Kabkot ────────────────────────────
-
-    private function loadPimpinanKabkotFormState(): void
-    {
-        $kabkots   = User::role('Kepala Kabkot')->with('satker')->orderBy('name')->get();
-        $existing  = PimpinanKabkotScore::where('pimpinan_id', Auth::id())
-            ->where('period_month', $this->month)
-            ->where('period_year',  $this->year)
-            ->get()
-            ->keyBy('kabkot_id');
-
-        $this->kabkotPimpinanFormState = [];
-        foreach ($kabkots as $kab) {
-            $rec = $existing->get($kab->id);
-            $this->kabkotPimpinanFormState[$kab->id] = [
-                'name'     => $kab->name,
-                'nip'      => $kab->nip,
-                'satker'   => $kab->satker?->name ?? '—',
-                'score'    => $rec ? $rec->score : '',
-                'is_rated' => (bool) $rec,
-            ];
-        }
-    }
-
-    public function resetPimpinanKabkotScore(string $kabkotId): void
-    {
-        PimpinanKabkotScore::where('pimpinan_id', Auth::id())
-            ->where('kabkot_id', $kabkotId)
-            ->where('period_month', $this->month)
-            ->where('period_year', $this->year)
-            ->delete();
-
-        if (isset($this->kabkotPimpinanFormState[$kabkotId])) {
-            $this->kabkotPimpinanFormState[$kabkotId]['score']    = '';
-            $this->kabkotPimpinanFormState[$kabkotId]['is_rated'] = false;
-        }
-
-        session()->flash('kabkot_pimpinan_success', 'Nilai berhasil direset.');
-    }
-
-    public function savePimpinanKabkotScore(string $kabkotId): void
-    {
-        $score = $this->kabkotPimpinanFormState[$kabkotId]['score'] ?? '';
-
-        if ($score === '' || (float) $score < 1 || (float) $score > 100) {
-            $this->showKabkotOverrideValidationDialog = true;
-            return;
-        }
-
-        PimpinanKabkotScore::updateOrCreate(
-            [
-                'pimpinan_id'  => Auth::id(),
-                'kabkot_id'    => $kabkotId,
-                'period_month' => $this->month,
-                'period_year'  => $this->year,
-            ],
-            ['score' => (float) $score]
-        );
-
-        $this->kabkotPimpinanFormState[$kabkotId]['is_rated'] = true;
-        session()->flash('kabkot_pimpinan_success', 'Nilai berhasil disimpan.');
-    }
-
-    // ── Nilai Akhir Langsung Pimpinan ke Pegawai ─────────────────────
-
-    private function loadPimpinanPegawaiFormState(): void
+    private function loadPegawaiKepalaFormState(): void
     {
         $pegawaiIds = User::role('Pegawai')
             ->where('satker_id', activeSatkerId())
@@ -640,19 +474,19 @@ class PimpinanDashboard extends Component
             ->get()
             ->keyBy('pegawai_id');
 
-        $this->pegawaiPimpinanFormState = [];
+        $this->pegawaiKepalaFormState = [];
         foreach ($pegawaiIds as $id) {
             $rec = $existing->get($id);
-            $this->pegawaiPimpinanFormState[$id] = [
+            $this->pegawaiKepalaFormState[$id] = [
                 'score'    => $rec ? (string) $rec->score : '',
                 'is_rated' => (bool) $rec,
             ];
         }
     }
 
-    public function savePimpinanPegawaiScore(string $pegawaiId): void
+    public function savePegawaiKepalaScore(string $pegawaiId): void
     {
-        $score = $this->pegawaiPimpinanFormState[$pegawaiId]['score'] ?? '';
+        $score = $this->pegawaiKepalaFormState[$pegawaiId]['score'] ?? '';
 
         if ($score === '' || (float) $score < 1 || (float) $score > 100) {
             $this->showOverrideValidationDialog = true;
@@ -669,11 +503,11 @@ class PimpinanDashboard extends Component
             ['score' => (float) $score]
         );
 
-        $this->pegawaiPimpinanFormState[$pegawaiId]['is_rated'] = true;
-        session()->flash('pegawai_pimpinan_success', 'Nilai akhir berhasil disimpan.');
+        $this->pegawaiKepalaFormState[$pegawaiId]['is_rated'] = true;
+        session()->flash('pegawai_kepala_success', 'Nilai akhir berhasil disimpan.');
     }
 
-    public function resetPimpinanPegawaiScore(string $pegawaiId): void
+    public function resetPegawaiKepalaScore(string $pegawaiId): void
     {
         PimpinanPegawaiScore::where('pimpinan_id', Auth::id())
             ->where('pegawai_id', $pegawaiId)
@@ -681,318 +515,26 @@ class PimpinanDashboard extends Component
             ->where('period_year', $this->year)
             ->delete();
 
-        if (isset($this->pegawaiPimpinanFormState[$pegawaiId])) {
-            $this->pegawaiPimpinanFormState[$pegawaiId]['score']    = '';
-            $this->pegawaiPimpinanFormState[$pegawaiId]['is_rated'] = false;
+        if (isset($this->pegawaiKepalaFormState[$pegawaiId])) {
+            $this->pegawaiKepalaFormState[$pegawaiId]['score']    = '';
+            $this->pegawaiKepalaFormState[$pegawaiId]['is_rated'] = false;
         }
 
-        session()->flash('pegawai_pimpinan_success', 'Nilai akhir berhasil direset.');
+        session()->flash('pegawai_kepala_success', 'Nilai akhir berhasil direset.');
     }
 
-    public function openIncompleteTeamsDialog(): void
-    {
-        $kabkots  = User::role('Kepala Kabkot')->get();
-        $allTeams = \App\Models\Team::where('satker_id', activeSatkerId())->with('leader')->get();
-
-        $ratings = KabkotRating::where('period_month', $this->month)
-            ->where('period_year', $this->year)
-            ->get(['team_id', 'kabkot_id']);
-
-        $result = [];
-        foreach ($allTeams as $team) {
-            $ratedIds  = $ratings->where('team_id', $team->id)->pluck('kabkot_id');
-            $unrated   = $kabkots->whereNotIn('id', $ratedIds->toArray())->values();
-            if ($unrated->isNotEmpty()) {
-                $result[] = [
-                    'team_name'      => $team->team_name,
-                    'leader_name'    => $team->leader->name ?? '-',
-                    'unrated_kabkots'=> $unrated->pluck('name')->toArray(),
-                ];
-            }
-        }
-
-        $this->kabkotIncompleteTeamsData = $result;
-        $this->showKabkotIncompleteTeamsDialog = true;
-    }
-
-    public function openIncompleteKabkotDialog(): void
-    {
-        $kabkots  = User::role('Kepala Kabkot')->get()->sortBy('name')->values();
-        $allTeams = \App\Models\Team::where('satker_id', activeSatkerId())->get();
-
-        $ratings = KabkotRating::where('period_month', $this->month)
-            ->where('period_year', $this->year)
-            ->get(['team_id', 'kabkot_id']);
-
-        $result = [];
-        foreach ($kabkots as $kabkot) {
-            $ratedTeamIds  = $ratings->where('kabkot_id', $kabkot->id)->pluck('team_id');
-            $unratedTeams  = $allTeams->whereNotIn('id', $ratedTeamIds->toArray())->values();
-            if ($unratedTeams->isNotEmpty()) {
-                $result[] = [
-                    'kabkot_name'  => $kabkot->name,
-                    'kabkot_nip'   => $kabkot->nip,
-                    'unrated_teams'=> $unratedTeams->pluck('team_name')->toArray(),
-                ];
-            }
-        }
-
-        $this->kabkotIncompleteKabkotData = $result;
-        $this->showKabkotIncompleteKabkotDialog = true;
-    }
-
-    private function buildKabkotRekapData(): array
-    {
-        $kabkots = User::role('Kepala Kabkot')->with('satker')->orderBy('name')->get();
-        if ($kabkots->isEmpty()) return [];
-
-        $kabkotIds = $kabkots->pluck('id');
-
-        $allRatings = KabkotRating::whereIn('kabkot_id', $kabkotIds)
-            ->where('period_month', $this->month)
-            ->where('period_year', $this->year)
-            ->get(['kabkot_id', 'score', 'overridden_by']);
-
-        $pimpinanScores = PimpinanKabkotScore::where('pimpinan_id', Auth::id())
-            ->whereIn('kabkot_id', $kabkotIds)
-            ->where('period_month', $this->month)
-            ->where('period_year', $this->year)
-            ->get()
-            ->keyBy('kabkot_id');
-
-        $rekap = [];
-        foreach ($kabkots as $kabkot) {
-            $ratings    = $allRatings->where('kabkot_id', $kabkot->id);
-            $scores     = $ratings->pluck('score')->filter()->values()->toArray();
-            $overridden = $ratings->filter(fn($r) => $r->overridden_by)->count();
-            $pimpinanRec = $pimpinanScores->get($kabkot->id);
-
-            $rekap[] = (object) [
-                'id'             => $kabkot->id,
-                'name'           => $kabkot->name,
-                'nip'            => $kabkot->nip,
-                'satker_name'    => $kabkot->satker?->name ?? '—',
-                'avg_score'      => count($scores) ? round(array_sum($scores) / count($scores), 2) : null,
-                'q3_score'       => count($scores) ? $this->calcQ3($scores) : null,
-                'max_score'      => count($scores) ? round(max($scores), 2) : null,
-                'rated_count'    => count($scores),
-                'has_override'   => $overridden > 0,
-                'pimpinan_score' => $pimpinanRec ? (float) $pimpinanRec->score : null,
-            ];
-        }
-
-        return $rekap;
-    }
-
-    private function buildKabkotStats(): array
-    {
-        $kabkots  = User::role('Kepala Kabkot')->get();
-        $allTeams = \App\Models\Team::where('satker_id', activeSatkerId())->get();
-
-        if ($kabkots->isEmpty() || $allTeams->isEmpty()) {
-            return ['incomplete_teams' => 0, 'incomplete_kabkots' => 0,
-                    'total_teams' => $allTeams->count(), 'total_kabkots' => $kabkots->count()];
-        }
-
-        $ratings = KabkotRating::where('period_month', $this->month)
-            ->where('period_year', $this->year)
-            ->get(['team_id', 'kabkot_id']);
-
-        $incompleteTeams = 0;
-        foreach ($allTeams as $team) {
-            $ratedIds = $ratings->where('team_id', $team->id)->pluck('kabkot_id');
-            if ($kabkots->whereNotIn('id', $ratedIds->toArray())->isNotEmpty()) {
-                $incompleteTeams++;
-            }
-        }
-
-        $incompleteKabkots = 0;
-        foreach ($kabkots as $kabkot) {
-            $ratedTeamIds = $ratings->where('kabkot_id', $kabkot->id)->pluck('team_id');
-            if ($allTeams->whereNotIn('id', $ratedTeamIds->toArray())->isNotEmpty()) {
-                $incompleteKabkots++;
-            }
-        }
-
-        return [
-            'incomplete_teams'   => $incompleteTeams,
-            'incomplete_kabkots' => $incompleteKabkots,
-            'total_teams'        => $allTeams->count(),
-            'total_kabkots'      => $kabkots->count(),
-        ];
-    }
-
-    public function render(DashboardService $service)
-    {
-        $monthNames = [
-            1 => 'Januari', 2 => 'Februari', 3 => 'Maret',    4 => 'April',
-            5 => 'Mei',     6 => 'Juni',     7 => 'Juli',      8 => 'Agustus',
-            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
-        ];
-        if (!$this->periodConfirmed) {
-            $sc = ScoringConfig::getAll(activeSatkerId());
-            return view('livewire.dashboards.pimpinan-dashboard', [
-                'rekap' => collect(), 'allUsers' => collect(), 'stats' => [],
-                'allTeams' => collect(), 'charts' => [], 'ktData' => [],
-                'kabkotRekap' => [], 'kabkotStats' => [], 'reportUser' => null,
-                'monthNames' => $monthNames,
-                'scoringConfig' => [
-                    'weight_score'        => $sc['weight_score']        ?? 80,
-                    'weight_volume'       => $sc['weight_volume']       ?? 10,
-                    'weight_quality'      => $sc['weight_quality']      ?? 10,
-                    'volume_ringan'       => $sc['volume_ringan']       ?? 60,
-                    'volume_sedang'       => $sc['volume_sedang']       ?? 80,
-                    'volume_berat'        => $sc['volume_berat']        ?? 100,
-                    'quality_kurang'      => $sc['quality_kurang']      ?? 50,
-                    'quality_cukup'       => $sc['quality_cukup']       ?? 75,
-                    'quality_baik'        => $sc['quality_baik']        ?? 90,
-                    'quality_sangat_baik' => $sc['quality_sangat_baik'] ?? 100,
-                ],
-            ]);
-        }
-
-        $rekap = $service->getPimpinanRekap($this->month, $this->year);
-        $data = collect($rekap['data']);
-
-        // Only show pure Pegawai (not Ketua Tim / Kepala Kabkot)
-        $pegawaiOnlyIds = User::role('Pegawai')
-            ->where('satker_id', activeSatkerId())
-            ->whereDoesntHave('roles', function ($q) {
-                $q->whereIn('name', ['Ketua Tim', 'Kepala Kabkot', 'Pimpinan', 'Admin']);
-            })
-            ->pluck('id')
-            ->all();
-        $data = $data->filter(fn($u) => in_array($u->id, $pegawaiOnlyIds));
-
-        // Augment each pegawai with min/max from team scores + pimpinan direct score
-        $pimpinanPegawaiScores = PimpinanPegawaiScore::where('pimpinan_id', Auth::id())
-            ->whereIn('pegawai_id', $pegawaiOnlyIds)
-            ->where('period_month', $this->month)
-            ->where('period_year',  $this->year)
-            ->get()
-            ->keyBy('pegawai_id');
-
-        $data = $data->map(function ($u) use ($pimpinanPegawaiScores) {
-            $teamScores = collect($u->details)->pluck('score')->filter(fn($s) => $s > 0)->values();
-            $u->min_score = $teamScores->count() ? round($teamScores->min(), 2) : null;
-            $u->max_score = $teamScores->count() ? round($teamScores->max(), 2) : null;
-            $rec = $pimpinanPegawaiScores->get($u->id);
-            $u->pimpinan_score = $rec ? (float) $rec->score : null;
-            $raw = $u->pimpinan_score ?? ($u->averageScore > 0 ? $u->averageScore : null);
-            $u->nilai_akhir = $raw !== null ? (int) round($raw, 0) : null;
-            return $u;
-        });
-
-        // Filtering
-        if ($this->search) {
-            $q = strtolower($this->search);
-            $data = $data->filter(fn($u) =>
-                str_contains(strtolower($u->name), $q) || str_contains($u->nip, $q)
-            );
-        }
-
-        if ($this->teamFilter !== 'All') {
-            $data = $data->filter(fn($u) =>
-                collect($u->details)->contains('teamName', $this->teamFilter)
-            );
-        }
-
-        if ($this->statusFilter === 'HasTeam') {
-            $data = $data->filter(fn($u) => $u->totalTeams > 0);
-        } elseif ($this->statusFilter === 'NoTeam') {
-            $data = $data->filter(fn($u) => $u->totalTeams === 0);
-        }
-
-        // Sorting
-        $isDesc = $this->sortDir === 'desc';
-        $data = $data->sortBy($this->sortKey, SORT_REGULAR, $isDesc);
-
-        // Extract unique teams for filter
-        $allTeams = collect($rekap['data'])->flatMap(fn($u) => collect($u->details)->pluck('teamName'))->unique()->sort();
-
-        // Prepare charts data (single computation per render)
-        $charts = $this->prepareChartsData($rekap['data']);
-
-        if ($this->shouldRefreshCharts && $this->activeTab === 'overview') {
-            $this->dispatch('refreshCharts', charts: $charts);
-        }
-
-        // Ketua Tim input tab data
-        $ktData = $this->buildKetuaTimData();
-        if ($this->ktSearch) {
-            $q = strtolower($this->ktSearch);
-            $ktData = array_filter($ktData, fn($d) =>
-                str_contains(strtolower($d['ketua_name']), $q) ||
-                str_contains($d['ketua_nip'] ?? '', $q)
-            );
-        }
-        $ktSortKey = $this->ktSortKey;
-        $ktSortDir = $this->ktSortDir;
-        uasort($ktData, function ($a, $b) use ($ktSortKey, $ktSortDir) {
-            $av = $a[$ktSortKey] ?? '';
-            $bv = $b[$ktSortKey] ?? '';
-            if ($av === null && $bv === null) return 0;
-            if ($av === null) return 1;
-            if ($bv === null) return -1;
-            return $ktSortDir === 'asc' ? ($av <=> $bv) : ($bv <=> $av);
-        });
-
-        // Kabkot rekap tab data
-        $kabkotRekap  = $this->buildKabkotRekapData();
-        if ($this->kabkotSearch) {
-            $q = strtolower($this->kabkotSearch);
-            $kabkotRekap = array_values(array_filter($kabkotRekap, fn($d) =>
-                str_contains(strtolower($d->name), $q) ||
-                str_contains($d->nip ?? '', $q)
-            ));
-        }
-        $kabkotSortKey = $this->kabkotSortKey;
-        $kabkotSortDir = $this->kabkotSortDir;
-        usort($kabkotRekap, function ($a, $b) use ($kabkotSortKey, $kabkotSortDir) {
-            $av = $a->$kabkotSortKey ?? null;
-            $bv = $b->$kabkotSortKey ?? null;
-            if ($av === null && $bv === null) return 0;
-            if ($av === null) return 1;
-            if ($bv === null) return -1;
-            return $kabkotSortDir === 'asc' ? ($av <=> $bv) : ($bv <=> $av);
-        });
-        $kabkotStats  = $this->buildKabkotStats();
-
-        $sc = ScoringConfig::getAll(activeSatkerId());
-
-        return view('livewire.dashboards.pimpinan-dashboard', [
-            'rekap'         => $data,
-            'allUsers'      => collect($rekap['data']),
-            'stats'         => $rekap['stats'],
-            'allTeams'      => $allTeams,
-            'charts'        => $charts,
-            'ktData'        => $ktData,
-            'kabkotRekap'   => $kabkotRekap,
-            'kabkotStats'   => $kabkotStats,
-            'scoringConfig' => [
-                'weight_score'        => $sc['weight_score']        ?? 80,
-                'weight_volume'       => $sc['weight_volume']       ?? 10,
-                'weight_quality'      => $sc['weight_quality']      ?? 10,
-                'volume_ringan'       => $sc['volume_ringan']       ?? 60,
-                'volume_sedang'       => $sc['volume_sedang']       ?? 80,
-                'volume_berat'        => $sc['volume_berat']        ?? 100,
-                'quality_kurang'      => $sc['quality_kurang']      ?? 50,
-                'quality_cukup'       => $sc['quality_cukup']       ?? 75,
-                'quality_baik'        => $sc['quality_baik']        ?? 90,
-                'quality_sangat_baik' => $sc['quality_sangat_baik'] ?? 100,
-            ],
-            'monthNames' => $monthNames,
-            'reportUser' => $this->reportUserId ? \App\Models\User::find($this->reportUserId) : null,
-        ]);
-    }
+    // ── Build data helpers ───────────────────────────────────────────
 
     private function buildKetuaTimData(): array
     {
-        $ketuaTimUsers = User::role('Ketua Tim')->where('satker_id', activeSatkerId())->with('ledTeams')->orderBy('name')->get();
+        $ketuaTimUsers = User::role('Ketua Tim')
+            ->where('satker_id', activeSatkerId())
+            ->with('ledTeams')
+            ->orderBy('name')
+            ->get();
 
         $ketuaIds = $ketuaTimUsers->pluck('id')->toArray();
 
-        // Ratings given by each KT to their members (for rekomendasi)
         $memberRatings = Rating::whereIn('evaluator_id', $ketuaIds)
             ->where('satker_id', activeSatkerId())
             ->where('period_month', $this->month)
@@ -1000,8 +542,7 @@ class PimpinanDashboard extends Component
             ->where('score', '>', 0)
             ->get(['evaluator_id', 'team_id', 'final_score']);
 
-        // Ratings given by Pimpinan to KT (for nilai_akhir)
-        $pimpinanRatings = Rating::where('evaluator_id', Auth::id())
+        $kepalaRatings = Rating::where('evaluator_id', Auth::id())
             ->where('satker_id', activeSatkerId())
             ->whereIn('target_user_id', $ketuaIds)
             ->where('period_month', $this->month)
@@ -1026,7 +567,7 @@ class PimpinanDashboard extends Component
                     ->values()
                     ->toArray();
 
-                $saved = $pimpinanRatings
+                $saved = $kepalaRatings
                     ->where('target_user_id', $kt->id)
                     ->where('team_id', $team->id)
                     ->first();
@@ -1038,7 +579,7 @@ class PimpinanDashboard extends Component
                     'team_name'   => $team->team_name,
                     'avg'         => count($scores) ? (int) round(array_sum($scores) / count($scores)) : null,
                     'max'         => count($scores) ? (int) round(max($scores)) : null,
-                    'q3'         => count($scores) ? $this->calcQ3($scores) : null,
+                    'q3'          => count($scores) ? $this->calcQ3($scores) : null,
                     'rated_count' => count($scores),
                 ];
             }
@@ -1083,8 +624,7 @@ class PimpinanDashboard extends Component
 
     private function prepareChartsData($data)
     {
-        // 1. Team Performance Distribution (Average Score)
-        $teamSumMap = [];
+        $teamSumMap   = [];
         $teamCountMap = [];
         $teamLeaderMap = [];
         $teamScoresMap = [];
@@ -1092,7 +632,7 @@ class PimpinanDashboard extends Component
             foreach ($u->details as $d) {
                 if ($d['score'] !== null && $d['score'] > 0) {
                     $t = $d['teamName'];
-                    $teamSumMap[$t] = ($teamSumMap[$t] ?? 0) + $d['score'];
+                    $teamSumMap[$t]   = ($teamSumMap[$t] ?? 0) + $d['score'];
                     $teamCountMap[$t] = ($teamCountMap[$t] ?? 0) + 1;
                     $teamScoresMap[$t][] = $d['score'];
                     if (!isset($teamLeaderMap[$t])) {
@@ -1108,23 +648,21 @@ class PimpinanDashboard extends Component
         }
 
         arsort($teamPerfMap);
-        $topTeams = array_slice($teamPerfMap, 0, 15);
+        $topTeams      = array_slice($teamPerfMap, 0, 15);
         $topTeamLabels = array_keys($topTeams);
         $topTeamLeaders = array_map(fn($t) => $teamLeaderMap[$t] ?? '-', $topTeamLabels);
-        $topTeamMax = array_map(fn($t) => max($teamScoresMap[$t] ?? [0]), $topTeamLabels);
-        $topTeamQ3  = array_map(fn($t) => $this->calcQ3($teamScoresMap[$t] ?? [0]), $topTeamLabels);
+        $topTeamMax    = array_map(fn($t) => max($teamScoresMap[$t] ?? [0]), $topTeamLabels);
+        $topTeamQ3     = array_map(fn($t) => $this->calcQ3($teamScoresMap[$t] ?? [0]), $topTeamLabels);
 
-        // 2. Perf Distribution
         $dist = ['Sangat Baik' => 0, 'Baik' => 0, 'Cukup' => 0, 'Kurang' => 0, 'Belum Dinilai' => 0];
         foreach ($data as $u) {
-            if ($u->averageScore >= 90) $dist['Sangat Baik']++;
-            elseif ($u->averageScore >= 80) $dist['Baik']++;
-            elseif ($u->averageScore >= 60) $dist['Cukup']++;
-            elseif ($u->averageScore > 0) $dist['Kurang']++;
-            else $dist['Belum Dinilai']++;
+            if ($u->averageScore >= 90)       $dist['Sangat Baik']++;
+            elseif ($u->averageScore >= 80)   $dist['Baik']++;
+            elseif ($u->averageScore >= 60)   $dist['Cukup']++;
+            elseif ($u->averageScore > 0)     $dist['Kurang']++;
+            else                              $dist['Belum Dinilai']++;
         }
 
-        // 3. Scatter
         $scatter = [];
         $totalX = 0; $totalY = 0; $countValid = 0;
         foreach ($data as $u) {
@@ -1145,5 +683,138 @@ class PimpinanDashboard extends Component
             'avgX'     => round($avgX, 2),
             'avgY'     => round($avgY, 2),
         ];
+    }
+
+    public function render(DashboardService $service)
+    {
+        $monthNames = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret',    4 => 'April',
+            5 => 'Mei',     6 => 'Juni',     7 => 'Juli',      8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+        ];
+        if (!$this->periodConfirmed) {
+            $sc = ScoringConfig::getAll(activeSatkerId());
+            return view('livewire.dashboards.kepala-dashboard', [
+                'rekap' => collect(), 'allUsers' => collect(), 'stats' => [],
+                'allTeams' => collect(), 'charts' => [], 'ktData' => [],
+                'reportUser' => null, 'monthNames' => $monthNames,
+                'scoringConfig' => [
+                    'weight_score'        => $sc['weight_score']        ?? 80,
+                    'weight_volume'       => $sc['weight_volume']       ?? 10,
+                    'weight_quality'      => $sc['weight_quality']      ?? 10,
+                    'volume_ringan'       => $sc['volume_ringan']       ?? 60,
+                    'volume_sedang'       => $sc['volume_sedang']       ?? 80,
+                    'volume_berat'        => $sc['volume_berat']        ?? 100,
+                    'quality_kurang'      => $sc['quality_kurang']      ?? 50,
+                    'quality_cukup'       => $sc['quality_cukup']       ?? 75,
+                    'quality_baik'        => $sc['quality_baik']        ?? 90,
+                    'quality_sangat_baik' => $sc['quality_sangat_baik'] ?? 100,
+                ],
+            ]);
+        }
+
+        $rekap = $service->getPimpinanRekap($this->month, $this->year);
+        $data  = collect($rekap['data']);
+
+        $pegawaiOnlyIds = User::role('Pegawai')
+            ->where('satker_id', activeSatkerId())
+            ->whereDoesntHave('roles', function ($q) {
+                $q->whereIn('name', ['Ketua Tim', 'Kepala Kabkot', 'Pimpinan', 'Admin']);
+            })
+            ->pluck('id')
+            ->all();
+        $data = $data->filter(fn($u) => in_array($u->id, $pegawaiOnlyIds));
+
+        $kepalaScores = PimpinanPegawaiScore::where('pimpinan_id', Auth::id())
+            ->whereIn('pegawai_id', $pegawaiOnlyIds)
+            ->where('period_month', $this->month)
+            ->where('period_year',  $this->year)
+            ->get()
+            ->keyBy('pegawai_id');
+
+        $data = $data->map(function ($u) use ($kepalaScores) {
+            $teamScores = collect($u->details)->pluck('score')->filter(fn($s) => $s > 0)->values();
+            $u->min_score = $teamScores->count() ? round($teamScores->min(), 2) : null;
+            $u->max_score = $teamScores->count() ? round($teamScores->max(), 2) : null;
+            $rec = $kepalaScores->get($u->id);
+            $u->kepala_score = $rec ? (float) $rec->score : null;
+            $raw = $u->kepala_score ?? ($u->averageScore > 0 ? $u->averageScore : null);
+            $u->nilai_akhir = $raw !== null ? (int) round($raw, 0) : null;
+            return $u;
+        });
+
+        if ($this->search) {
+            $q = strtolower($this->search);
+            $data = $data->filter(fn($u) =>
+                str_contains(strtolower($u->name), $q) || str_contains($u->nip, $q)
+            );
+        }
+
+        if ($this->teamFilter !== 'All') {
+            $data = $data->filter(fn($u) =>
+                collect($u->details)->contains('teamName', $this->teamFilter)
+            );
+        }
+
+        if ($this->statusFilter === 'HasTeam') {
+            $data = $data->filter(fn($u) => $u->totalTeams > 0);
+        } elseif ($this->statusFilter === 'NoTeam') {
+            $data = $data->filter(fn($u) => $u->totalTeams === 0);
+        }
+
+        $isDesc = $this->sortDir === 'desc';
+        $data   = $data->sortBy($this->sortKey, SORT_REGULAR, $isDesc);
+
+        $allTeams = collect($rekap['data'])->flatMap(fn($u) => collect($u->details)->pluck('teamName'))->unique()->sort();
+
+        $charts = $this->prepareChartsData($rekap['data']);
+
+        if ($this->shouldRefreshCharts && $this->activeTab === 'overview') {
+            $this->dispatch('refreshCharts', charts: $charts);
+        }
+
+        $ktData = $this->buildKetuaTimData();
+        if ($this->ktSearch) {
+            $q = strtolower($this->ktSearch);
+            $ktData = array_filter($ktData, fn($d) =>
+                str_contains(strtolower($d['ketua_name']), $q) ||
+                str_contains($d['ketua_nip'] ?? '', $q)
+            );
+        }
+        $ktSortKey = $this->ktSortKey;
+        $ktSortDir = $this->ktSortDir;
+        uasort($ktData, function ($a, $b) use ($ktSortKey, $ktSortDir) {
+            $av = $a[$ktSortKey] ?? '';
+            $bv = $b[$ktSortKey] ?? '';
+            if ($av === null && $bv === null) return 0;
+            if ($av === null) return 1;
+            if ($bv === null) return -1;
+            return $ktSortDir === 'asc' ? ($av <=> $bv) : ($bv <=> $av);
+        });
+
+        $sc = ScoringConfig::getAll(activeSatkerId());
+
+        return view('livewire.dashboards.kepala-dashboard', [
+            'rekap'         => $data,
+            'allUsers'      => collect($rekap['data']),
+            'stats'         => $rekap['stats'],
+            'allTeams'      => $allTeams,
+            'charts'        => $charts,
+            'ktData'        => $ktData,
+            'scoringConfig' => [
+                'weight_score'        => $sc['weight_score']        ?? 80,
+                'weight_volume'       => $sc['weight_volume']       ?? 10,
+                'weight_quality'      => $sc['weight_quality']      ?? 10,
+                'volume_ringan'       => $sc['volume_ringan']       ?? 60,
+                'volume_sedang'       => $sc['volume_sedang']       ?? 80,
+                'volume_berat'        => $sc['volume_berat']        ?? 100,
+                'quality_kurang'      => $sc['quality_kurang']      ?? 50,
+                'quality_cukup'       => $sc['quality_cukup']       ?? 75,
+                'quality_baik'        => $sc['quality_baik']        ?? 90,
+                'quality_sangat_baik' => $sc['quality_sangat_baik'] ?? 100,
+            ],
+            'monthNames' => $monthNames,
+            'reportUser' => $this->reportUserId ? \App\Models\User::find($this->reportUserId) : null,
+        ]);
     }
 }

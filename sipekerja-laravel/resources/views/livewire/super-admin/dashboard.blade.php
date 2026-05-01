@@ -12,7 +12,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h2 class="text-2xl font-black text-slate-800 uppercase italic tracking-tight">Super Admin</h2>
-            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">Panel Pusat — PAKAR</p>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">Panel Pusat — SIPAKAR</p>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
             @foreach([['dashboard','Dashboard'],['satker','Kelola Satker'],['pegawai','Kelola Pegawai'],['laporan','Laporan'],['konfigurasi','Konfigurasi']] as [$key,$label])
@@ -212,7 +212,7 @@
             <button wire:click="openCreateSatker"
                 class="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all active:scale-95">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Tambah Satker Kabkot
+                Tambah Satker
             </button>
         </div>
 
@@ -278,7 +278,6 @@
                                     class="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-[9px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all active:scale-95">
                                     + User
                                 </button>
-                                @if($satker->type === 'kabkot')
                                 <button wire:click="openAssignAdmin('{{ $satker->id }}')"
                                     class="px-3 py-1.5 rounded-lg bg-minimal-indigo/10 text-minimal-indigo text-[9px] font-black uppercase tracking-widest hover:bg-minimal-indigo hover:text-white transition-all active:scale-95">
                                     Assign Admin
@@ -286,6 +285,11 @@
                                 <button wire:click="openEditSatker('{{ $satker->id }}')"
                                     class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-[9px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95">
                                     Edit
+                                </button>
+                                @if($satker->type !== 'provinsi')
+                                <button wire:click="confirmDeleteSatker('{{ $satker->id }}')"
+                                    class="px-3 py-1.5 rounded-lg bg-red-50 text-red-500 text-[9px] font-black uppercase tracking-widest hover:bg-red-100 transition-all active:scale-95">
+                                    Hapus
                                 </button>
                                 @endif
                             </div>
@@ -314,6 +318,7 @@
                     <th class="px-4 py-3 border-b border-slate-100 text-center">Nilai Pegawai</th>
                     <th class="px-4 py-3 border-b border-slate-100 text-center">Nilai Ketua Tim</th>
                     <th class="px-4 py-3 border-b border-slate-100 text-center">Nilai Kepala Kabkot</th>
+                    <th class="px-4 py-3 border-b border-slate-100 text-center">Laporan Lengkap</th>
                 </tr>
             </thead>
             <tbody>
@@ -362,6 +367,13 @@
                         @else
                         <span class="text-[9px] font-bold text-slate-300">Hanya Provinsi</span>
                         @endif
+                    </td>
+                    <td class="px-4 py-4 text-center">
+                        <a href="{{ route('export.super.laporan', ['month'=>$month,'year'=>$year,'satker_id'=>$satker->id]) }}"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-white text-[9px] font-black uppercase rounded-lg hover:bg-slate-900 transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                            Lengkap
+                        </a>
                     </td>
                 </tr>
                 @endforeach
@@ -478,28 +490,35 @@
     @if($activeTab === 'pegawai')
     <div class="space-y-4">
 
-        {{-- Filter bar --}}
-        <div class="flex flex-col sm:flex-row gap-3">
-            <select wire:model.live="pgFilterSatker"
-                class="bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-black text-slate-700 focus:ring-4 focus:ring-slate-100 focus:border-slate-400 transition-all min-w-[200px]">
-                <option value="">Semua Satker</option>
-                @foreach($satkers as $s)
-                <option value="{{ $s->id }}">{{ $s->name }}</option>
-                @endforeach
-            </select>
-            <div class="relative flex-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input wire:model.live.debounce.300ms="pgSearch" type="text"
-                    placeholder="Cari nama, NIP, email..."
-                    class="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-4 focus:ring-slate-100 focus:border-slate-400 transition-all">
+        {{-- Filter bar + actions --}}
+        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div class="flex flex-col sm:flex-row gap-3 flex-1">
+                <select wire:model.live="pgFilterSatker"
+                    class="bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-black text-slate-700 focus:ring-4 focus:ring-slate-100 focus:border-slate-400 transition-all min-w-[200px]">
+                    <option value="">Semua Satker</option>
+                    @foreach($satkers as $s)
+                    <option value="{{ $s->id }}">{{ $s->name }}</option>
+                    @endforeach
+                </select>
+                <div class="relative flex-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input wire:model.live.debounce.300ms="pgSearch" type="text"
+                        placeholder="Cari nama, NIP, email..."
+                        class="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-4 focus:ring-slate-100 focus:border-slate-400 transition-all">
+                </div>
+                <select wire:model.live="pgFilterRole"
+                    class="bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-black text-slate-700 focus:ring-4 focus:ring-slate-100 transition-all">
+                    <option value="ALL">Semua Role</option>
+                    @foreach($allRoles as $r)
+                    <option value="{{ $r->name }}">{{ $r->name }}</option>
+                    @endforeach
+                </select>
             </div>
-            <select wire:model.live="pgFilterRole"
-                class="bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-black text-slate-700 focus:ring-4 focus:ring-slate-100 transition-all">
-                <option value="ALL">Semua Role</option>
-                @foreach($allRoles as $r)
-                <option value="{{ $r->name }}">{{ $r->name }}</option>
-                @endforeach
-            </select>
+            <button wire:click="openAddUser()"
+                class="flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-all active:scale-95 shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Tambah Pegawai
+            </button>
         </div>
 
         {{-- Table --}}
@@ -748,7 +767,7 @@
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="$set('showSatkerModal', false)"></div>
         <div class="relative bg-white w-full max-w-md rounded-3xl shadow-2xl border-t-4 border-slate-900 p-8">
             <h4 class="text-lg font-black text-slate-800 uppercase italic mb-6">
-                {{ $editingSatkerId ? 'Edit Satker' : 'Tambah Satker Kabkot' }}
+                {{ $editingSatkerId ? 'Edit Satker' : 'Tambah Satker' }}
             </h4>
             <form wire:submit="saveSatker" class="space-y-4">
                 <div>
@@ -759,7 +778,16 @@
                     @error('satkerName') <p class="text-[9px] font-black text-red-500 mt-1 uppercase">{{ $message }}</p> @enderror
                 </div>
                 <div>
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Kode <span class="text-slate-300">(opsional)</span></label>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Tipe</label>
+                    <select wire:model="satkerType"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-slate-200 focus:border-slate-400 transition-all">
+                        <option value="kabkot">Kabupaten / Kota</option>
+                        <option value="provinsi">Provinsi</option>
+                    </select>
+                    @error('satkerType') <p class="text-[9px] font-black text-red-500 mt-1 uppercase">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Kode Wilayah <span class="text-slate-300">(opsional)</span></label>
                     <input wire:model="satkerKode" type="text"
                         class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-slate-200 focus:border-slate-400 transition-all"
                         placeholder="Contoh: 7201">
@@ -849,9 +877,23 @@
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="$set('showAddUserModal', false)"></div>
         <div class="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl border-t-4 border-emerald-500 p-8">
             <h4 class="text-lg font-black text-slate-800 uppercase italic mb-1">Tambah User</h4>
+            @if($addUserSatkerName)
             <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-6">{{ $addUserSatkerName }}</p>
+            @else
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Pilih satker & isi data user baru</p>
+            @endif
             <form wire:submit="addUser" class="space-y-4">
                 <div class="grid grid-cols-2 gap-3">
+                    <div class="col-span-2">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Satker</label>
+                        <select wire:model="addUserSatkerId" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-slate-100 transition-all">
+                            <option value="">— Pilih Satker —</option>
+                            @foreach($satkers as $s)
+                            <option value="{{ $s->id }}">{{ $s->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('addUserSatkerId') <p class="text-[9px] font-black text-red-500 mt-1">{{ $message }}</p> @enderror
+                    </div>
                     <div class="col-span-2">
                         <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Nama Lengkap</label>
                         <input wire:model="addUserName" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-slate-100 transition-all" placeholder="Nama lengkap">
@@ -898,6 +940,32 @@
     {{-- ══════════════════════════════════════════════════════════════════
          MODAL: Pindah User Antar Satker
     ══════════════════════════════════════════════════════════════════ --}}
+    {{-- ══════════════════════════════════════════════════════════════════
+         MODAL: Konfirmasi Hapus Satker
+    ══════════════════════════════════════════════════════════════════ --}}
+    @if($showDeleteSatkerModal)
+    <div class="fixed inset-0 z-[200] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="$set('showDeleteSatkerModal', false)"></div>
+        <div class="relative bg-white w-full max-w-sm rounded-3xl shadow-2xl border-t-4 border-red-500 p-8">
+            <div class="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mb-5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            </div>
+            <h4 class="text-lg font-black text-slate-800 uppercase italic mb-2">Hapus Satker?</h4>
+            <p class="text-sm font-bold text-slate-600 mb-1">{{ $deleteSatkerName }}</p>
+            <p class="text-xs text-slate-400 mb-8">Satker ini akan dihapus permanen. Seluruh data terkait (pegawai, tim, konfigurasi) perlu ditangani terlebih dahulu.</p>
+            <div class="flex gap-3">
+                <button wire:click="$set('showDeleteSatkerModal', false)"
+                    class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Batal</button>
+                <button wire:click="executeDeleteSatker" wire:loading.attr="disabled"
+                    class="flex-[2] py-3 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all active:scale-95">
+                    <span wire:loading.remove>Ya, Hapus Satker</span>
+                    <span wire:loading>Menghapus...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
+
     @if($showMoveUserModal)
     <div class="fixed inset-0 z-[200] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" wire:click="$set('showMoveUserModal', false)"></div>

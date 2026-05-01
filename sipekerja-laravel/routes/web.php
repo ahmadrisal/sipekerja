@@ -31,11 +31,16 @@ Route::middleware(['auth', 'role.context'])->group(function () {
     Route::get('/super-admin/export/nilai-pegawai',   [\App\Http\Controllers\ExportController::class, 'superPegawai'])->middleware('role.context:Super Admin')->name('export.super.pegawai');
     Route::get('/super-admin/export/nilai-ketua-tim', [\App\Http\Controllers\ExportController::class, 'superKetuaTim'])->middleware('role.context:Super Admin')->name('export.super.ketuaTim');
     Route::get('/super-admin/export/nilai-kabkot',    [\App\Http\Controllers\ExportController::class, 'superKabkot'])->middleware('role.context:Super Admin')->name('export.super.kabkot');
+    Route::get('/super-admin/export/laporan',         [\App\Http\Controllers\ExportController::class, 'superLaporan'])->middleware('role.context:Super Admin')->name('export.super.laporan');
 
     // Export (Pimpinan)
     Route::get('/export/nilai-pegawai',   [\App\Http\Controllers\ExportController::class, 'pegawai'])->middleware('role.context:Pimpinan')->name('export.pegawai');
     Route::get('/export/nilai-ketua-tim', [\App\Http\Controllers\ExportController::class, 'ketuaTim'])->middleware('role.context:Pimpinan')->name('export.ketuaTim');
     Route::get('/export/nilai-kabkot',    [\App\Http\Controllers\ExportController::class, 'kabkot'])->middleware('role.context:Pimpinan')->name('export.kabkot');
+
+    // Export (Kepala Kabkot)
+    Route::get('/kepala/export/nilai-pegawai',   [\App\Http\Controllers\ExportController::class, 'kepalaPegawai'])->middleware('role.context:Kepala Kabkot')->name('export.kepala.pegawai');
+    Route::get('/kepala/export/nilai-ketua-tim', [\App\Http\Controllers\ExportController::class, 'kepalaKetuaTim'])->middleware('role.context:Kepala Kabkot')->name('export.kepala.ketuaTim');
 
     Route::post('/logout', function () {
         Auth::logout();

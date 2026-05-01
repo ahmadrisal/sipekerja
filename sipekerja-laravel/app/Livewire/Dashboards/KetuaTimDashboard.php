@@ -41,10 +41,18 @@ class KetuaTimDashboard extends Component
         9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
     ];
 
+    public $periodConfirmed = false;
+
     public function mount()
     {
-        $this->month = date('n');
-        $this->year  = date('Y');
+        $this->month = null;
+        $this->year  = (int) date('Y');
+    }
+
+    public function confirmPeriod()
+    {
+        if (!$this->month || !$this->year) return;
+        $this->periodConfirmed = true;
         $this->loadData();
         $this->loadKabkotData();
     }
@@ -56,20 +64,16 @@ class KetuaTimDashboard extends Component
 
     public function updatedMonth()
     {
-        $this->loadData();
-        $this->loadKabkotData();
-        if ($this->activeTab === 'dashboard') {
-            $this->dispatch('refreshKetuaCharts');
-        }
+        $this->periodConfirmed = false;
+        $this->formState = [];
+        $this->kabkotFormState = [];
     }
 
     public function updatedYear()
     {
-        $this->loadData();
-        $this->loadKabkotData();
-        if ($this->activeTab === 'dashboard') {
-            $this->dispatch('refreshKetuaCharts');
-        }
+        $this->periodConfirmed = false;
+        $this->formState = [];
+        $this->kabkotFormState = [];
     }
 
     // ── Penilaian Pegawai ────────────────────────────────────────────
@@ -208,7 +212,7 @@ class KetuaTimDashboard extends Component
     {
         $user      = Auth::user();
         $teams     = Team::where('leader_id', $user->id)->get();
-        $kabkots   = User::role('Kepala Kabkot')->orderBy('name')->get();
+        $kabkots   = User::role('Kepala Kabkot')->with('satker')->orderBy('name')->get();
 
         $existing = KabkotRating::where('evaluator_id', $user->id)
             ->where('period_month', $this->month)
@@ -224,11 +228,12 @@ class KetuaTimDashboard extends Component
                 $hasWork = $rating ? ($rating->score > 0) : true;
 
                 $this->kabkotFormState[$key] = [
-                    'kabkot_id'   => $kabkot->id,
-                    'kabkot_name' => $kabkot->name,
-                    'kabkot_nip'  => $kabkot->nip,
-                    'team_id'     => $team->id,
-                    'team_name'   => $team->team_name,
+                    'kabkot_id'     => $kabkot->id,
+                    'kabkot_name'   => $kabkot->name,
+                    'kabkot_nip'    => $kabkot->nip,
+                    'kabkot_satker' => $kabkot->satker?->name ?? '—',
+                    'team_id'       => $team->id,
+                    'team_name'     => $team->team_name,
                     'has_work'    => $hasWork,
                     'score'       => ($rating && $rating->score > 0) ? $rating->score : '',
                     'notes'       => ($rating && $rating->notes !== 'TIDAK_ADA_PEKERJAAN') ? ($rating->notes ?? '') : '',
@@ -332,6 +337,21 @@ class KetuaTimDashboard extends Component
 
     public function render(DashboardService $service)
     {
+        if (!$this->periodConfirmed) {
+            $c = ScoringConfig::getAll();
+            return view('livewire.dashboards.ketua-tim-dashboard', [
+                'stats'       => ['teamCount' => 0, 'uniqueMemberCount' => 0, 'ratedCount' => 0, 'unratedCount' => 0, 'teamChartData' => [], 'unratedMembers' => collect(), 'teamDetails' => []],
+                'membersData' => [], 'kabkotData' => [],
+                'scoringConfig' => [
+                    'weight_score' => $c['weight_score'] ?? 80, 'weight_volume' => $c['weight_volume'] ?? 10,
+                    'weight_quality' => $c['weight_quality'] ?? 10, 'volume_ringan' => $c['volume_ringan'] ?? 60,
+                    'volume_sedang' => $c['volume_sedang'] ?? 80, 'volume_berat' => $c['volume_berat'] ?? 100,
+                    'quality_kurang' => $c['quality_kurang'] ?? 50, 'quality_cukup' => $c['quality_cukup'] ?? 75,
+                    'quality_baik' => $c['quality_baik'] ?? 90, 'quality_sangat_baik' => $c['quality_sangat_baik'] ?? 100,
+                ],
+            ]);
+        }
+
         $user  = Auth::user();
         $stats = $service->getKetuaTimStats($user->id, $this->month, $this->year);
 
@@ -353,9 +373,10 @@ class KetuaTimDashboard extends Component
             $kid = $entry['kabkot_id'];
             if (!isset($kabkotData[$kid])) {
                 $kabkotData[$kid] = [
-                    'kabkot_name' => $entry['kabkot_name'],
-                    'kabkot_nip'  => $entry['kabkot_nip'],
-                    'teams'       => [],
+                    'kabkot_name'   => $entry['kabkot_name'],
+                    'kabkot_nip'    => $entry['kabkot_nip'],
+                    'kabkot_satker' => $entry['kabkot_satker'],
+                    'teams'         => [],
                 ];
             }
             $kabkotData[$kid]['teams'][] = ['key' => $key, 'team_name' => $entry['team_name']];

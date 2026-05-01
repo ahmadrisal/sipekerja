@@ -24,33 +24,49 @@
             <button @click="activeTab = 'input'" class="px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all" :class="activeTab === 'input' ? 'bg-minimal-indigo text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'">
                 Input Nilai
             </button>
+            @if(activeSatkerType() === 'provinsi')
             <button @click="activeTab = 'kabkot'" class="px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all" :class="activeTab === 'kabkot' ? 'bg-minimal-indigo text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'">
                 Penilaian Kabkot
+            </button>
+            @endif
+        </div>
+    </div>
+
+    <!-- Period Picker — wajib dikonfirmasi sebelum menilai -->
+    <div class="bg-white p-4 rounded-[1.5rem] shadow-sm border {{ $periodConfirmed ? 'border-emerald-100' : 'border-amber-100' }} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-colors duration-300">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl {{ $periodConfirmed ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-500' }} flex items-center justify-center transition-colors duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            </div>
+            <div>
+                <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Periode Penilaian</p>
+                @if($periodConfirmed)
+                    <p class="text-xs font-black text-emerald-700 leading-none mt-0.5 uppercase italic">{{ $monthNames[$month] ?? '...' }} {{ $year }}</p>
+                    <p class="text-[9px] font-bold text-emerald-500 mt-0.5">Terkonfirmasi ✓</p>
+                @else
+                    <p class="text-xs font-black text-amber-600 leading-none mt-0.5 italic">Belum dipilih</p>
+                    <p class="text-[9px] font-bold text-amber-400 mt-0.5">Pilih periode lalu konfirmasi</p>
+                @endif
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <select wire:model.live="month" class="h-10 px-3 rounded-xl border {{ $periodConfirmed ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-100 bg-slate-50' }} text-[10px] font-black uppercase tracking-wider text-slate-700 focus:ring-4 focus:ring-minimal-indigo/10 transition-all cursor-pointer">
+                <option value="">— Pilih Bulan —</option>
+                @foreach($monthNames as $num => $name) <option value="{{ $num }}">{{ $name }}</option> @endforeach
+            </select>
+            <select wire:model.live="year" class="h-10 px-3 rounded-xl border {{ $periodConfirmed ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-100 bg-slate-50' }} text-[10px] font-black uppercase tracking-wider text-slate-700 focus:ring-4 focus:ring-minimal-indigo/10 transition-all cursor-pointer">
+                @foreach(range(date('Y')-1, date('Y')) as $y) <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option> @endforeach
+            </select>
+            <button wire:click="confirmPeriod" @disabled(!$month || !$year)
+                class="h-10 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95
+                    {{ ($month && $year && !$periodConfirmed) ? 'bg-minimal-indigo text-white shadow-md hover:bg-indigo-700' : ($periodConfirmed ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed') }}">
+                {{ $periodConfirmed ? '✓ Terkonfirmasi' : 'Konfirmasi' }}
             </button>
         </div>
     </div>
 
-    <!-- Global Period Filter -->
-    <div class="bg-white p-4 rounded-[1.5rem] shadow-sm border border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-minimal-indigo/5 text-minimal-indigo flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-            </div>
-            <div>
-                <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">Periode Acuan</p>
-                <p class="text-xs font-bold text-slate-700 leading-none mt-0.5">Bulan & Tahun Penilaian</p>
-            </div>
-        </div>
-        <div class="flex items-center gap-2">
-            <select wire:model.live="month" class="h-10 px-4 rounded-xl border border-slate-100 bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-700 focus:ring-4 focus:ring-minimal-indigo/10 transition-all cursor-pointer">
-                @foreach($monthNames as $num => $name) <option value="{{ $num }}">{{ $name }}</option> @endforeach
-            </select>
-            <select wire:model.live="year" class="h-10 px-4 rounded-xl border border-slate-100 bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-700 focus:ring-4 focus:ring-minimal-indigo/10 transition-all cursor-pointer">
-                @foreach(range(date('Y')-2, date('Y')) as $y) <option value="{{ $y }}">{{ $y }}</option> @endforeach
-            </select>
-        </div>
-    </div>
-
+    {{-- Konten: Alpine yang mengatur visibilitas agar tidak crash saat Livewire re-render --}}
+    <div x-show="$wire.periodConfirmed" class="space-y-6">
     <div x-show="activeTab === 'dashboard'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
         <div class="space-y-6">
             <!-- Metric Cards -->
@@ -112,7 +128,7 @@
                     @if(count($stats['teamChartData']) > 0)
                         <div class="mb-6 px-1">
                             <h3 class="text-lg font-black text-slate-800 tracking-tight">Performa Rerata Tim</h3>
-                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Capaian Nilai Anggota Per Tim ({{ $monthNames[$month] }})</p>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Capaian Nilai Anggota Per Tim ({{ $monthNames[$month] ?? '' }})</p>
                         </div>
                         <div id="ketuaBarChart" class="h-80 w-full" wire:ignore></div>
                         <div class="flex items-center justify-center gap-6 mt-6 text-[8px] font-black uppercase tracking-widest text-slate-400">
@@ -180,7 +196,7 @@
             <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
                 <div class="flex items-center justify-between mb-4">
                     <p class="text-xs font-black text-slate-400 uppercase tracking-widest">
-                        Progres Penilaian Tim <span class="text-minimal-indigo italic underline decoration-amber-400 decoration-2 underline-offset-4">{{ $monthNames[$month] }} {{ $year }}</span>
+                        Progres Penilaian Tim <span class="text-minimal-indigo italic underline decoration-amber-400 decoration-2 underline-offset-4">{{ $monthNames[$month] ?? '' }} {{ $year }}</span>
                     </p>
                     <p class="text-sm font-black text-minimal-indigo italic">
                         {{ $ratedTargets }} / {{ $totalTargets }} <span class="text-[10px] text-slate-400 not-italic font-bold uppercase ml-1">target telah dinilai</span>
@@ -551,7 +567,8 @@
             </div>
         @endif
 
-    {{-- ===== TAB: PENILAIAN KABKOT ===== --}}
+    {{-- ===== TAB: PENILAIAN KABKOT (provinsi only) ===== --}}
+    @if(activeSatkerType() === 'provinsi')
     <div x-show="activeTab === 'kabkot'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
         <div class="space-y-4">
 
@@ -582,7 +599,8 @@
                     <div class="bg-gradient-to-br from-slate-800 to-minimal-indigo rounded-2xl px-5 py-4 flex items-center justify-between">
                         <div>
                             <p class="text-sm font-black text-white uppercase tracking-tight leading-none">{{ $kabkot['kabkot_name'] }}</p>
-                            <p class="text-[9px] font-mono font-bold text-indigo-300 mt-1">NIP: {{ $kabkot['kabkot_nip'] }}</p>
+                            <p class="text-[9px] font-mono font-bold text-indigo-300 mt-0.5">NIP: {{ $kabkot['kabkot_nip'] }}</p>
+                            <p class="text-[8px] font-bold text-indigo-200/60 mt-0.5 uppercase tracking-widest">{{ $kabkot['kabkot_satker'] }}</p>
                         </div>
                         @php
                             $allRatedMobile = collect($kabkot['teams'])->every(fn($t) => $kabkotFormState[$t['key']]['is_rated']);
@@ -716,7 +734,8 @@
                                     @if($tIdx === 0)
                                     <td rowspan="{{ count($kabkot['teams']) }}" class="px-6 py-4 align-top border-r border-slate-50 bg-white">
                                         <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight leading-none">{{ $kabkot['kabkot_name'] }}</p>
-                                        <p class="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest mt-1">{{ $kabkot['kabkot_nip'] }}</p>
+                                        <p class="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest mt-0.5">{{ $kabkot['kabkot_nip'] }}</p>
+                                        <p class="text-[8px] font-bold text-slate-300 uppercase tracking-widest mt-0.5">{{ $kabkot['kabkot_satker'] }}</p>
                                         @php
                                             $allRated = collect($kabkot['teams'])->every(fn($t) => $kabkotFormState[$t['key']]['is_rated']);
                                         @endphp
@@ -797,6 +816,7 @@
             @endif
         </div>
     </div>
+    @endif
 
         <!-- Reset Confirmation Dialog -->
         @if($showResetDialog)
@@ -946,6 +966,18 @@
         </div>
         @endif
     @endforeach
+    </div>{{-- tutup x-show="$wire.periodConfirmed" --}}
+
+    {{-- Prompt: wajib pilih periode dulu --}}
+    <div x-show="!$wire.periodConfirmed" class="bg-white rounded-[1.5rem] p-12 shadow-sm border border-amber-100 flex flex-col items-center justify-center text-center gap-5">
+        <div class="w-16 h-16 rounded-3xl bg-amber-50 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><line x1="8" x2="8" y1="14" y2="18"/><line x1="12" x2="12" y1="14" y2="18"/><line x1="16" x2="16" y1="14" y2="18"/></svg>
+        </div>
+        <div>
+            <h3 class="text-base font-black text-slate-700">Pilih Periode Penilaian Terlebih Dahulu</h3>
+            <p class="text-xs text-slate-400 mt-2 max-w-sm">Pilih <strong class="text-slate-600">bulan</strong> dan <strong class="text-slate-600">tahun</strong> penilaian di atas, lalu klik <strong class="text-minimal-indigo">Konfirmasi</strong> untuk mulai menilai.</p>
+        </div>
+    </div>
 
     <script type="application/json" id="ketuaStatsData">
         {!! json_encode($stats['teamChartData']) !!}
@@ -1022,6 +1054,13 @@
 
         setTimeout(() => window.initChart(), 50);
 
+        // Auto-init chart saat periode pertama kali dikonfirmasi (client-side, tanpa round-trip server)
+        $wire.$watch('periodConfirmed', (value) => {
+            if (value) {
+                setTimeout(() => window.initChart(), 150);
+            }
+        });
+
         Livewire.on('refreshKetuaCharts', (event) => {
             const data = event.chartData || null;
             setTimeout(() => window.initChart(data), 50);
@@ -1057,6 +1096,7 @@
                     <span class="h-0.5 w-5 rounded-full transition-all" :class="activeTab === 'input' ? 'bg-minimal-indigo' : 'bg-transparent'"></span>
                 </button>
 
+                @if(activeSatkerType() === 'provinsi')
                 <div class="w-px bg-slate-100 my-2"></div>
 
                 <button
@@ -1068,6 +1108,7 @@
                     <span class="text-[9px] font-black uppercase tracking-widest">Kabkot</span>
                     <span class="h-0.5 w-5 rounded-full transition-all" :class="activeTab === 'kabkot' ? 'bg-minimal-indigo' : 'bg-transparent'"></span>
                 </button>
+                @endif
             </div>
         </div>
     </div>

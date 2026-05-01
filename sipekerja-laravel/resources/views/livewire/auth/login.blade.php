@@ -5,8 +5,8 @@
 
     <div class="w-full max-w-md p-8 bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl z-10 mx-4">
         <div class="text-center mb-8">
-            <h1 class="text-3xl font-black text-white tracking-tight mb-1 uppercase italic">PAKAR</h1>
-            <p class="text-blue-100/70 text-sm font-medium">Penilaian Kinerja Aparatur</p>
+            <h1 class="text-3xl font-black text-white tracking-tight mb-1 uppercase italic">SIPAKAR</h1>
+            <p class="text-blue-100/70 text-sm font-medium">Sistem Informasi Penilaian Kinerja Aparatur</p>
             <p class="text-amber-400/80 text-[11px] font-bold uppercase tracking-widest mt-1">BPS Provinsi Sulawesi Tengah</p>
         </div>
 

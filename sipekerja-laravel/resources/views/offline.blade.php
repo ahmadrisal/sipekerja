@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Tidak Ada Koneksi — PAKAR</title>
+    <title>Tidak Ada Koneksi — SIPAKAR</title>
     <meta name="theme-color" content="#003366">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }

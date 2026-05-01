@@ -32,7 +32,13 @@ class Dashboard extends Component
     public bool $showSatkerModal = false;
     public string $satkerName = '';
     public string $satkerKode = '';
+    public string $satkerType = 'kabkot';
     public ?string $editingSatkerId = null;
+
+    // Delete satker confirm
+    public bool $showDeleteSatkerModal = false;
+    public ?string $deleteSatkerId = null;
+    public string $deleteSatkerName = '';
 
     // Assign admin modal
     public bool $showAssignAdminModal = false;
@@ -120,6 +126,7 @@ class Dashboard extends Component
     public function openCreateSatker(): void
     {
         $this->reset(['satkerName', 'satkerKode', 'editingSatkerId']);
+        $this->satkerType = 'kabkot';
         $this->showSatkerModal = true;
     }
 
@@ -129,6 +136,7 @@ class Dashboard extends Component
         $this->editingSatkerId = $id;
         $this->satkerName = $satker->name;
         $this->satkerKode = $satker->kode ?? '';
+        $this->satkerType = $satker->type;
         $this->showSatkerModal = true;
     }
 
@@ -136,30 +144,52 @@ class Dashboard extends Component
     {
         $this->validate([
             'satkerName' => 'required|min:3|max:100',
+            'satkerType' => 'required|in:provinsi,kabkot',
             'satkerKode' => 'nullable|max:20|unique:satkers,kode' . ($this->editingSatkerId ? ",{$this->editingSatkerId}" : ''),
         ], [
             'satkerName.required' => 'Nama satker wajib diisi.',
             'satkerName.min'      => 'Nama satker minimal 3 karakter.',
-            'satkerKode.unique'   => 'Kode satker sudah digunakan.',
+            'satkerKode.unique'   => 'Kode wilayah sudah digunakan.',
         ]);
 
         if ($this->editingSatkerId) {
             Satker::findOrFail($this->editingSatkerId)->update([
                 'name' => $this->satkerName,
+                'type' => $this->satkerType,
                 'kode' => $this->satkerKode ?: null,
             ]);
         } else {
             Satker::create([
                 'name'      => $this->satkerName,
-                'type'      => 'kabkot',
+                'type'      => $this->satkerType,
                 'kode'      => $this->satkerKode ?: null,
                 'is_active' => true,
             ]);
         }
 
         $this->showSatkerModal = false;
-        $this->reset(['satkerName', 'satkerKode', 'editingSatkerId']);
+        $this->reset(['satkerName', 'satkerKode', 'satkerType', 'editingSatkerId']);
         session()->flash('success', 'Satker berhasil disimpan.');
+    }
+
+    public function confirmDeleteSatker(string $id): void
+    {
+        $satker = Satker::findOrFail($id);
+        if ($satker->type === 'provinsi') return; // provinsi tidak bisa dihapus
+        $this->deleteSatkerId   = $id;
+        $this->deleteSatkerName = $satker->name;
+        $this->showDeleteSatkerModal = true;
+    }
+
+    public function executeDeleteSatker(): void
+    {
+        $satker = Satker::find($this->deleteSatkerId);
+        if ($satker && $satker->type !== 'provinsi') {
+            $satker->delete();
+            session()->flash('success', "{$this->deleteSatkerName} berhasil dihapus.");
+        }
+        $this->showDeleteSatkerModal = false;
+        $this->reset(['deleteSatkerId', 'deleteSatkerName']);
     }
 
     public function toggleSatkerActive(string $id): void
@@ -202,11 +232,11 @@ class Dashboard extends Component
 
     // ── Tambah User ──────────────────────────────────────────────────
 
-    public function openAddUser(string $satkerId): void
+    public function openAddUser(?string $satkerId = null): void
     {
-        $this->addUserSatkerId   = $satkerId;
-        $this->addUserSatkerName = Satker::findOrFail($satkerId)->name;
         $this->reset(['addUserName', 'addUserNip', 'addUserEmail', 'addUserPassword']);
+        $this->addUserSatkerId   = $satkerId;
+        $this->addUserSatkerName = $satkerId ? Satker::findOrFail($satkerId)->name : '';
         $this->addUserRole = 'Pegawai';
         $this->showAddUserModal = true;
     }
@@ -214,14 +244,16 @@ class Dashboard extends Component
     public function addUser(): void
     {
         $this->validate([
-            'addUserName'     => 'required|min:2|max:100',
-            'addUserNip'      => 'required|unique:users,nip',
-            'addUserEmail'    => 'required|email|unique:users,email',
-            'addUserPassword' => 'required|min:6',
-            'addUserRole'     => 'required|in:Pegawai,Ketua Tim,Pimpinan,Admin,Kepala Kabkot',
+            'addUserName'      => 'required|min:2|max:100',
+            'addUserNip'       => 'required|unique:users,nip',
+            'addUserEmail'     => 'required|email|unique:users,email',
+            'addUserPassword'  => 'required|min:6',
+            'addUserRole'      => 'required|in:Pegawai,Ketua Tim,Pimpinan,Admin,Kepala Kabkot',
+            'addUserSatkerId'  => 'required|exists:satkers,id',
         ], [
-            'addUserNip.unique'   => 'NIP sudah terdaftar.',
-            'addUserEmail.unique' => 'Email sudah terdaftar.',
+            'addUserNip.unique'    => 'NIP sudah terdaftar.',
+            'addUserEmail.unique'  => 'Email sudah terdaftar.',
+            'addUserSatkerId.required' => 'Satker wajib dipilih.',
         ]);
 
         $user = User::create([
@@ -519,9 +551,10 @@ class Dashboard extends Component
         // User search for assign admin / move user
         $searchableUsers = collect();
         if ($this->showAssignAdminModal && strlen($this->adminSearch) >= 2) {
-            $searchableUsers = User::where(fn($q) => $q
-                ->where('name', 'like', "%{$this->adminSearch}%")
-                ->orWhere('nip', 'like', "%{$this->adminSearch}%"))
+            $searchableUsers = User::where('satker_id', $this->assignSatkerId)
+                ->where(fn($q) => $q
+                    ->where('name', 'like', "%{$this->adminSearch}%")
+                    ->orWhere('nip', 'like', "%{$this->adminSearch}%"))
                 ->with('roles')->limit(10)->get();
         }
 
@@ -550,6 +583,6 @@ class Dashboard extends Component
             'monthNames'      => $this->monthNames,
             'pegawaiList'     => $pegawaiList,
             'allRoles'        => $allRoles,
-        ])->title('Super Admin — PAKAR');
+        ])->title('Super Admin — SIPAKAR');
     }
 }

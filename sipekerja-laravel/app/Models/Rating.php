@@ -14,6 +14,7 @@ class Rating extends Model
         'evaluator_id',
         'target_user_id',
         'team_id',
+        'satker_id',
         'score',
         'notes',
         'volume_work',

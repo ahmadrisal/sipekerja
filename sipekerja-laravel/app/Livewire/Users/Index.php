@@ -59,7 +59,11 @@ class Index extends Component
 
     public function mount()
     {
-        $this->allRoles = Role::whereNotIn('name', ['Super Admin'])->get();
+        $excludeRoles = ['Super Admin'];
+        if (activeSatkerType() === 'kabkot') {
+            $excludeRoles[] = 'Pimpinan';
+        }
+        $this->allRoles = Role::whereNotIn('name', $excludeRoles)->get();
         $this->uniqueTeams = \App\Models\Team::where('satker_id', activeSatkerId())->orderBy('team_name')->pluck('team_name')->toArray();
     }
 
@@ -370,8 +374,10 @@ class Index extends Component
     {
         $this->validate();
 
-        // Prevent assigning Super Admin via this form
         $this->selectedRoles = array_filter($this->selectedRoles, fn($r) => $r !== 'Super Admin');
+        if (activeSatkerType() === 'kabkot') {
+            $this->selectedRoles = array_filter($this->selectedRoles, fn($r) => $r !== 'Pimpinan');
+        }
 
         $userData = [
             'nip'      => $this->nip,
